@@ -199,6 +199,11 @@ else()
     # MIDI processing
     src/midi/MIDIClip.cpp
     src/midi/MIDIProcessor.cpp
+    # Project management
+    src/project/Project.h
+    src/project/Project.cpp
+    src/project/Serialize.h
+    src/project/Serialize.cpp
   )
 endif()
 
