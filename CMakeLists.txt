@@ -27,7 +27,7 @@ Then retry: cmake -S . -B build
 endif()
 
 cmake_minimum_required(VERSION 3.22)
-project(MixMindAI VERSION 2.0.0 LANGUAGES CXX C)
+project(MixMindAI VERSION 0.1.0 LANGUAGES CXX C)
 
 # C++20 requirement
 set(CMAKE_CXX_STANDARD 20)
