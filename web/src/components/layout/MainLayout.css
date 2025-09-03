@@ -1,0 +1,33 @@
+/* Main Layout Styles */
+
+.main-layout {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: relative;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+}
+
+.main-content {
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+}
+
+.sidebar-overlay {
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .main-layout {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-layout {
+    font-size: 12px;
+  }
+}

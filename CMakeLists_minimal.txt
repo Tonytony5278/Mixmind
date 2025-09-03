@@ -1,0 +1,55 @@
+# Minimal CMakeLists.txt for proof-of-concept build
+cmake_minimum_required(VERSION 3.22)
+
+# CMake version requirement with friendly error message
+if(CMAKE_VERSION VERSION_LESS "3.22")
+    message(FATAL_ERROR "
+=== CMake Version Too Old ===
+Current version: ${CMAKE_VERSION}
+Required version: 3.22 or higher
+
+To upgrade CMake:
+
+Windows (Chocolatey):
+  choco install cmake --version=3.28.1
+
+Windows (Direct):
+  1. Download from: https://cmake.org/download/
+  2. Install latest MSI package
+  3. Add to PATH or use CMake GUI
+
+macOS (Homebrew):
+  brew install cmake
+
+macOS (Direct):
+  1. Download from: https://cmake.org/download/
+  2. Install DMG package
+
+Then retry: cmake -S . -B build
+
+")
+endif()
+
+project(MixMindAI 
+    VERSION 1.0.0
+    DESCRIPTION "AI-First DAW - Cursor × Logic"
+    LANGUAGES CXX C
+)
+
+# C++20 requirement
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# Core test executable
+add_executable(core_test test/core_test.cpp)
+target_compile_features(core_test PRIVATE cxx_std_20)
+
+message(STATUS "=== MixMind AI Minimal Build ===")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "C++ standard: ${CMAKE_CXX_STANDARD}")
+message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")

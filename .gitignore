@@ -1,0 +1,39 @@
+﻿# Build + cache
+build/
+build2/
+build_real/
+build_logs/
+CMakeFiles/
+CMakeCache.txt
+*.vcxproj*
+*.sln
+
+# Deps fetched at configure/build time
+*_deps/
+deps/
+**/deps/
+
+# Artifacts & dist
+artifacts/
+dist/
+
+# IDE / local
+.vscode/
+.idea/
+*.user
+*.suo
+*.pdb
+*.ipch
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Claude local settings
+.claude/
+
+# Large audio (keep out for now; we can LFS later)
+assets/**/*.wav
+assets/**/*.flac
+assets/**/*.mp3

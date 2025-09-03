@@ -1,0 +1,559 @@
+# CMake version requirement with friendly error message
+if(CMAKE_VERSION VERSION_LESS "3.22")
+    message(FATAL_ERROR "
+=== CMake Version Too Old ===
+Current version: ${CMAKE_VERSION}
+Required version: 3.22 or higher
+
+To upgrade CMake:
+
+Windows (Chocolatey):
+  choco install cmake --version=3.28.1
+
+Windows (Direct):
+  1. Download from: https://cmake.org/download/
+  2. Install latest MSI package
+  3. Add to PATH or use CMake GUI
+
+macOS (Homebrew):
+  brew install cmake
+
+macOS (Direct):
+  1. Download from: https://cmake.org/download/
+  2. Install DMG package
+  
+Then retry: cmake -S . -B build
+")
+endif()
+
+cmake_minimum_required(VERSION 3.22)
+project(MixMindAI VERSION 2.0.0 LANGUAGES CXX C)
+
+# C++20 requirement
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Build configuration
+set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type")
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo")
+
+# Platform detection
+if(APPLE)
+    set(PLATFORM_MACOS TRUE)
+elseif(WIN32)
+    set(PLATFORM_WINDOWS TRUE)
+elseif(UNIX)
+    set(PLATFORM_LINUX TRUE)
+endif()
+
+# Build options
+option(RUBBERBAND_ENABLED "Enable Rubber Band time stretching (commercial)" OFF)
+option(AUBIO_ENABLED "Enable aubio audio analysis" OFF)
+option(ESSENTIA_ENABLED "Enable Essentia audio analysis" OFF)
+option(ONNX_ENABLED "Enable ONNX Runtime for ML inference" ON)
+option(BUILD_TESTS "Build unit tests" ON)
+option(BUILD_BENCHMARKS "Build performance benchmarks" OFF)
+
+# Feature flags
+add_compile_definitions(
+    MIXMIND_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+    MIXMIND_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+    MIXMIND_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+)
+
+if(RUBBERBAND_ENABLED)
+    add_compile_definitions(RUBBERBAND_ENABLED=1)
+endif()
+
+if(AUBIO_ENABLED)
+    add_compile_definitions(AUBIO_ENABLED=1)
+endif()
+
+if(ESSENTIA_ENABLED)
+    add_compile_definitions(ESSENTIA_ENABLED=1)
+endif()
+
+if(ONNX_ENABLED)
+    add_compile_definitions(ONNX_ENABLED=1)
+endif()
+
+# Engine backend selection
+set(ENGINE_BACKEND "TRACKTION" CACHE STRING "Audio engine backend")
+set_property(CACHE ENGINE_BACKEND PROPERTY STRINGS "TRACKTION" "LEGACY")
+add_compile_definitions(ENGINE_BACKEND_${ENGINE_BACKEND}=1)
+
+# Include FetchContent for dependency management
+include(FetchContent)
+include(ExternalProject)
+
+# Set up dependency directory
+set(DEPS_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps)
+
+###########################################
+# Core Dependencies: JUCE + Tracktion Engine
+###########################################
+
+# Tracktion Engine (includes JUCE)
+FetchContent_Declare(
+    tracktion_engine
+    GIT_REPOSITORY https://github.com/Tracktion/tracktion_engine.git
+    GIT_TAG develop
+    SOURCE_DIR ${DEPS_DIR}/tracktion_engine
+)
+
+FetchContent_MakeAvailable(tracktion_engine)
+
+# VST3 SDK
+FetchContent_Declare(
+    vst3sdk
+    GIT_REPOSITORY https://github.com/steinbergmedia/vst3sdk.git
+    GIT_TAG master
+    SOURCE_DIR ${DEPS_DIR}/vst3sdk
+)
+
+set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "Enable VST3 plugin examples")
+set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "Enable VST3 hosting examples") 
+set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "Create plugin link")
+FetchContent_MakeAvailable(vst3sdk)
+
+###########################################
+# HTTP and WebSocket Libraries
+###########################################
+
+# cpp-httplib for REST API
+FetchContent_Declare(
+    httplib
+    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+    GIT_TAG v0.15.3
+    SOURCE_DIR ${DEPS_DIR}/httplib
+)
+
+set(HTTPLIB_REQUIRE_OPENSSL OFF)
+FetchContent_MakeAvailable(httplib)
+
+# WebSocket++ for WebSocket server (commented out for PoC build)
+# FetchContent_Declare(
+#     websocketpp
+#     GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
+#     GIT_TAG 0.8.2
+#     SOURCE_DIR ${DEPS_DIR}/websocketpp
+# )
+# 
+# FetchContent_MakeAvailable(websocketpp)
+
+###########################################
+# JSON Processing
+###########################################
+
+# nlohmann/json
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.11.3
+    SOURCE_DIR ${DEPS_DIR}/nlohmann_json
+)
+
+FetchContent_MakeAvailable(nlohmann_json)
+
+# JSON Schema Validator
+FetchContent_Declare(
+    json_schema_validator
+    GIT_REPOSITORY https://github.com/pboettch/json-schema-validator.git
+    GIT_TAG 2.3.0
+    SOURCE_DIR ${DEPS_DIR}/json_schema_validator
+)
+
+FetchContent_MakeAvailable(json_schema_validator)
+
+###########################################
+# Audio Analysis Libraries
+###########################################
+
+# libebur128 for LUFS/True Peak metering
+FetchContent_Declare(
+    libebur128
+    GIT_REPOSITORY https://github.com/jiixyj/libebur128.git
+    GIT_TAG v1.2.6
+    SOURCE_DIR ${DEPS_DIR}/libebur128
+)
+
+FetchContent_MakeAvailable(libebur128)
+
+# KissFFT for spectrum analysis
+FetchContent_Declare(
+    kissfft
+    GIT_REPOSITORY https://github.com/mborgerding/kissfft.git
+    GIT_TAG master
+    SOURCE_DIR ${DEPS_DIR}/kissfft
+)
+
+FetchContent_MakeAvailable(kissfft)
+
+###########################################
+# Metadata and File Format Support
+###########################################
+
+# TagLib for audio metadata
+FetchContent_Declare(
+    taglib
+    GIT_REPOSITORY https://github.com/taglib/taglib.git
+    GIT_TAG v2.0
+    SOURCE_DIR ${DEPS_DIR}/taglib
+)
+
+set(BUILD_SHARED_LIBS OFF)
+set(BUILD_TESTING OFF)
+FetchContent_MakeAvailable(taglib)
+
+###########################################
+# OSC Remote Control
+###########################################
+
+# liblo for OSC support
+if(NOT WIN32)  # liblo has better support on Unix systems
+    FetchContent_Declare(
+        liblo
+        GIT_REPOSITORY https://github.com/radarsat1/liblo.git
+        GIT_TAG 0.32
+        SOURCE_DIR ${DEPS_DIR}/liblo
+    )
+    FetchContent_MakeAvailable(liblo)
+    set(OSC_LIBRARY liblo)
+else()
+    # Use oscpack as fallback for Windows
+    FetchContent_Declare(
+        oscpack
+        GIT_REPOSITORY https://github.com/RossBencina/oscpack.git
+        GIT_TAG develop
+        SOURCE_DIR ${DEPS_DIR}/oscpack
+    )
+    FetchContent_MakeAvailable(oscpack)
+    set(OSC_LIBRARY oscpack)
+endif()
+
+###########################################
+# Time Stretching Libraries
+###########################################
+
+# SoundTouch (always available as fallback)
+FetchContent_Declare(
+    soundtouch
+    GIT_REPOSITORY https://github.com/soundtouch/soundtouch.git
+    GIT_TAG 2.3.2
+    SOURCE_DIR ${DEPS_DIR}/soundtouch
+)
+
+FetchContent_MakeAvailable(soundtouch)
+
+# Rubber Band (commercial, optional)
+if(RUBBERBAND_ENABLED)
+    find_package(RubberBand REQUIRED)
+    if(NOT RubberBand_FOUND)
+        message(WARNING "Rubber Band not found, falling back to SoundTouch")
+        set(RUBBERBAND_ENABLED OFF)
+    endif()
+endif()
+
+###########################################
+# Optional Audio Analysis
+###########################################
+
+# aubio (optional)
+if(AUBIO_ENABLED)
+    FetchContent_Declare(
+        aubio
+        GIT_REPOSITORY https://github.com/aubio/aubio.git
+        GIT_TAG 0.4.9
+        SOURCE_DIR ${DEPS_DIR}/aubio
+    )
+    FetchContent_MakeAvailable(aubio)
+endif()
+
+# Essentia (optional, more complex build)
+if(ESSENTIA_ENABLED)
+    # Essentia requires manual setup due to complex dependencies
+    find_package(Essentia QUIET)
+    if(NOT Essentia_FOUND)
+        message(WARNING "Essentia not found, disabling Essentia support")
+        set(ESSENTIA_ENABLED OFF)
+    endif()
+endif()
+
+###########################################
+# Machine Learning Runtime
+###########################################
+
+# OpenAI Whisper for voice recognition
+FetchContent_Declare(
+    whisper_cpp
+    GIT_REPOSITORY https://github.com/ggerganov/whisper.cpp.git
+    GIT_TAG v1.5.4
+    SOURCE_DIR ${DEPS_DIR}/whisper_cpp
+)
+
+set(WHISPER_BUILD_TESTS OFF)
+set(WHISPER_BUILD_EXAMPLES OFF)
+FetchContent_MakeAvailable(whisper_cpp)
+
+# ONNX Runtime (optional)
+if(ONNX_ENABLED)
+    if(PLATFORM_WINDOWS)
+        set(ONNX_URL "https://github.com/microsoft/onnxruntime/releases/download/v1.16.3/onnxruntime-win-x64-1.16.3.zip")
+        set(ONNX_DIR "${DEPS_DIR}/onnxruntime-win-x64")
+    elseif(PLATFORM_MACOS)
+        set(ONNX_URL "https://github.com/microsoft/onnxruntime/releases/download/v1.16.3/onnxruntime-osx-universal2-1.16.3.tgz")
+        set(ONNX_DIR "${DEPS_DIR}/onnxruntime-osx-universal2")
+    else()
+        set(ONNX_URL "https://github.com/microsoft/onnxruntime/releases/download/v1.16.3/onnxruntime-linux-x64-1.16.3.tgz")
+        set(ONNX_DIR "${DEPS_DIR}/onnxruntime-linux-x64")
+    endif()
+    
+    ExternalProject_Add(
+        onnxruntime_external
+        URL ${ONNX_URL}
+        SOURCE_DIR ${ONNX_DIR}
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ""
+    )
+    
+    # Create imported target for ONNX Runtime
+    add_library(onnxruntime SHARED IMPORTED)
+    add_dependencies(onnxruntime onnxruntime_external)
+    
+    set_target_properties(onnxruntime PROPERTIES
+        IMPORTED_LOCATION "${ONNX_DIR}/lib/libonnxruntime${CMAKE_SHARED_LIBRARY_SUFFIX}"
+        IMPORTED_IMPLIB "${ONNX_DIR}/lib/onnxruntime${CMAKE_IMPORT_LIBRARY_SUFFIX}"
+        INTERFACE_INCLUDE_DIRECTORIES "${ONNX_DIR}/include"
+    )
+endif()
+
+###########################################
+# Testing Framework
+###########################################
+
+if(BUILD_TESTS)
+    # Google Test
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG v1.14.0
+        SOURCE_DIR ${DEPS_DIR}/googletest
+    )
+    
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+    
+    enable_testing()
+    include(GoogleTest)
+endif()
+
+###########################################
+# Benchmarking
+###########################################
+
+if(BUILD_BENCHMARKS)
+    # Google Benchmark
+    FetchContent_Declare(
+        benchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG v1.8.3
+        SOURCE_DIR ${DEPS_DIR}/benchmark
+    )
+    
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(benchmark)
+endif()
+
+###########################################
+# Compiler Configuration
+###########################################
+
+# Set up compiler flags
+if(MSVC)
+    add_compile_options(
+        /W4          # Warning level 4
+        /WX          # Treat warnings as errors
+        /permissive- # Strict conformance
+        /Zc:__cplusplus # Correct __cplusplus macro
+        /MP          # Multi-processor compilation
+    )
+    
+    # Release optimizations
+    add_compile_options($<$<CONFIG:Release>:/O2 /Ob2 /DNDEBUG>)
+    
+    # Debug information
+    add_compile_options($<$<CONFIG:Debug>:/Od /Zi /DEBUG>)
+    
+else() # GCC/Clang
+    add_compile_options(
+        -Wall -Wextra -Wpedantic
+        -Werror
+        -fno-omit-frame-pointer
+    )
+    
+    # Release optimizations
+    add_compile_options($<$<CONFIG:Release>:-O3 -DNDEBUG -march=native>)
+    
+    # Debug information
+    add_compile_options($<$<CONFIG:Debug>:-Og -g -fsanitize=address -fsanitize=undefined>)
+    add_link_options($<$<CONFIG:Debug>:-fsanitize=address -fsanitize=undefined>)
+endif()
+
+# Platform-specific settings
+if(PLATFORM_MACOS)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0")
+    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
+elseif(PLATFORM_WINDOWS)
+    add_compile_definitions(
+        WIN32_LEAN_AND_MEAN
+        NOMINMAX
+        _CRT_SECURE_NO_WARNINGS
+    )
+endif()
+
+###########################################
+# Source Code Organization
+###########################################
+
+# Create main executable target (will be populated later)
+add_executable(MixMindAI)
+
+# Add subdirectories for source code
+add_subdirectory(src)
+
+# Link main dependencies
+target_link_libraries(MixMindAI PRIVATE
+    # Core audio
+    juce::juce_audio_basics
+    juce::juce_audio_devices
+    juce::juce_audio_formats
+    juce::juce_audio_processors
+    juce::juce_audio_utils
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_graphics
+    juce::juce_gui_basics
+    
+    # Tracktion Engine
+    tracktion_engine
+    
+    # VST3 SDK
+    sdk
+    sdk_hosting
+    sdk_common
+    
+    # JSON processing
+    nlohmann_json::nlohmann_json
+    nlohmann_json_schema_validator
+    
+    # Audio analysis
+    ebur128
+    kissfft
+    
+    # Metadata
+    tag
+    
+    # Time stretching
+    SoundTouch
+    
+    # OSC
+    ${OSC_LIBRARY}
+    
+    # HTTP and WebSocket
+    httplib::httplib
+    websocketpp::websocketpp
+    
+    # Voice recognition
+    whisper
+)
+
+# Optional libraries
+if(RUBBERBAND_ENABLED)
+    target_link_libraries(MixMindAI PRIVATE RubberBand::RubberBand)
+endif()
+
+if(AUBIO_ENABLED)
+    target_link_libraries(MixMindAI PRIVATE aubio)
+endif()
+
+if(ESSENTIA_ENABLED)
+    target_link_libraries(MixMindAI PRIVATE essentia)
+endif()
+
+if(ONNX_ENABLED)
+    target_link_libraries(MixMindAI PRIVATE onnxruntime)
+endif()
+
+###########################################
+# Installation and Packaging
+###########################################
+
+# Install targets
+install(TARGETS MixMindAI
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+# Install resources
+install(DIRECTORY resources/
+    DESTINATION share/mixmindai
+    PATTERN "*.DS_Store" EXCLUDE
+)
+
+# Package configuration
+set(CPACK_PACKAGE_NAME "MixMind AI Professional")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Professional AI-powered DAW")
+set(CPACK_PACKAGE_VENDOR "MixMind AI")
+
+if(PLATFORM_MACOS)
+    set(CPACK_GENERATOR "DragNDrop")
+elseif(PLATFORM_WINDOWS)
+    set(CPACK_GENERATOR "NSIS")
+else()
+    set(CPACK_GENERATOR "DEB;RPM")
+endif()
+
+include(CPack)
+
+###########################################
+# Development Tools
+###########################################
+
+# Add custom targets for development
+add_custom_target(format
+    COMMAND find src -name "*.cpp" -o -name "*.h" | xargs clang-format -i
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Formatting source code"
+)
+
+add_custom_target(analyze
+    COMMAND clang-tidy src/**/*.cpp -- -std=c++20
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Running static analysis"
+)
+
+# Generate compile_commands.json for IDE support
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Print configuration summary
+message(STATUS "")
+message(STATUS "=== MixMind AI Build Configuration ===")
+message(STATUS "Version: ${PROJECT_VERSION}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Engine backend: ${ENGINE_BACKEND}")
+message(STATUS "Platform: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "")
+message(STATUS "Optional Features:")
+message(STATUS "  Rubber Band: ${RUBBERBAND_ENABLED}")
+message(STATUS "  aubio: ${AUBIO_ENABLED}")
+message(STATUS "  Essentia: ${ESSENTIA_ENABLED}")
+message(STATUS "  ONNX Runtime: ${ONNX_ENABLED}")
+message(STATUS "  Tests: ${BUILD_TESTS}")
+message(STATUS "  Benchmarks: ${BUILD_BENCHMARKS}")
+message(STATUS "=====================================")
+message(STATUS "")
