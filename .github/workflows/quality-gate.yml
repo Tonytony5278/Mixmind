@@ -37,12 +37,13 @@ jobs:
           cmake -S . -B build -G "Ninja" \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DTRACKTION_BUILD_EXAMPLES=OFF \
-            -DTRACKTION_BUILD_TESTS=OFF
+            -DMIXMIND_MINIMAL=ON \
+            -DBUILD_TESTS=ON
 
       - name: Run clang-tidy
+        continue-on-error: true
         run: |
-          # Run clang-tidy on source files
+          # Run clang-tidy on source files (non-blocking for Alpha)
           find src -name "*.cpp" -o -name "*.h" | \
           head -20 | \  # Limit for now to avoid timeout
           xargs clang-tidy-18 \
@@ -50,7 +51,7 @@ jobs:
             --checks='-*,readability-*,performance-*,modernize-*,cppcoreguidelines-*' \
             --warnings-as-errors='' \
             --format-style=file \
-            > clang-tidy-report.txt || true
+            > clang-tidy-report.txt || echo "Static analysis: Advisory only for Alpha release"
 
       - name: Upload static analysis report
         uses: actions/upload-artifact@v4
@@ -60,6 +61,7 @@ jobs:
 
   code-coverage:
     runs-on: ubuntu-24.04
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4

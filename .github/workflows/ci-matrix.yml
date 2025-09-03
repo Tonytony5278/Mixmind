@@ -100,21 +100,22 @@ jobs:
 
       # Configure
       - name: Configure CMake
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: |
           cmake -S . -B build -G "${{ matrix.generator }}" ${{ matrix.arch }} \
             -DCMAKE_BUILD_TYPE=Release \
-            -DTRACKTION_BUILD_EXAMPLES=OFF \
-            -DTRACKTION_BUILD_TESTS=OFF \
-            -DRUBBERBAND_ENABLED=ON \
+            -DMIXMIND_MINIMAL=ON \
+            -DBUILD_TESTS=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       # Build
       - name: Build (Windows/Linux)
         if: matrix.os != 'macos-13'
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
         run: cmake --build build --config Release --parallel 4
 
       - name: Build (macOS)
@@ -124,6 +125,7 @@ jobs:
       # Test
       - name: Run tests
         working-directory: build
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
         run: ctest -C Release --output-on-failure --parallel 4
 
       # Upload artifacts

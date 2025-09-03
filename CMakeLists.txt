@@ -40,6 +40,7 @@ set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithD
 # Build options
 option(RUBBERBAND_ENABLED "Enable Rubber Band time stretching (commercial)" OFF)
 option(BUILD_TESTS "Build unit tests" ON)
+option(MIXMIND_MINIMAL "Build minimal, CI-friendly targets (no heavy audio deps)" OFF)
 
 # Include FetchContent for dependency management
 include(FetchContent)
@@ -52,35 +53,38 @@ set(DEPS_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps)
 # Core Dependencies
 ###########################################
 
-# Tracktion Engine (includes JUCE) - this is our primary DAW engine
-FetchContent_Declare(
-    tracktion_engine
-    GIT_REPOSITORY https://github.com/Tracktion/tracktion_engine.git
-    GIT_TAG develop
-    SOURCE_DIR ${DEPS_DIR}/tracktion_engine
-)
+# Heavy audio dependencies - only when not building minimal
+if(NOT MIXMIND_MINIMAL)
+    # Tracktion Engine (includes JUCE) - this is our primary DAW engine
+    FetchContent_Declare(
+        tracktion_engine
+        GIT_REPOSITORY https://github.com/Tracktion/tracktion_engine.git
+        GIT_TAG develop
+        SOURCE_DIR ${DEPS_DIR}/tracktion_engine
+    )
 
-# Configure Tracktion options BEFORE MakeAvailable
-set(TRACKTION_BUILD_EXAMPLES OFF CACHE BOOL "Build Tracktion examples")
-set(TRACKTION_BUILD_TESTS OFF CACHE BOOL "Build Tracktion tests") 
-set(TRACKTION_ENABLE_WEBVIEW OFF CACHE BOOL "Enable Tracktion webview")
-set(TRACKTION_ENABLE_ABLETON_LINK OFF CACHE BOOL "Enable Ableton Link")
+    # Configure Tracktion options BEFORE MakeAvailable
+    set(TRACKTION_BUILD_EXAMPLES OFF CACHE BOOL "Build Tracktion examples")
+    set(TRACKTION_BUILD_TESTS OFF CACHE BOOL "Build Tracktion tests") 
+    set(TRACKTION_ENABLE_WEBVIEW OFF CACHE BOOL "Enable Tracktion webview")
+    set(TRACKTION_ENABLE_ABLETON_LINK OFF CACHE BOOL "Enable Ableton Link")
 
-FetchContent_MakeAvailable(tracktion_engine)
+    FetchContent_MakeAvailable(tracktion_engine)
 
-# VST3 SDK with override-able tag  
-set(VST3SDK_GIT_TAG "master" CACHE STRING "VST3 SDK tag")
-FetchContent_Declare(
-    vst3sdk
-    GIT_REPOSITORY https://github.com/steinbergmedia/vst3sdk.git
-    GIT_TAG ${VST3SDK_GIT_TAG}
-    SOURCE_DIR ${DEPS_DIR}/vst3sdk
-)
+    # VST3 SDK with override-able tag  
+    set(VST3SDK_GIT_TAG "master" CACHE STRING "VST3 SDK tag")
+    FetchContent_Declare(
+        vst3sdk
+        GIT_REPOSITORY https://github.com/steinbergmedia/vst3sdk.git
+        GIT_TAG ${VST3SDK_GIT_TAG}
+        SOURCE_DIR ${DEPS_DIR}/vst3sdk
+    )
 
-set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "Enable VST3 plugin examples")
-set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "Enable VST3 hosting examples") 
-set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "Create plugin link")
-FetchContent_MakeAvailable(vst3sdk)
+    set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "Enable VST3 plugin examples")
+    set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "Enable VST3 hosting examples") 
+    set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "Create plugin link")
+    FetchContent_MakeAvailable(vst3sdk)
+endif()
 
 # Essential JSON support
 FetchContent_Declare(
@@ -174,25 +178,30 @@ add_subdirectory(src)
 
 # Link essential libraries to main executable
 target_link_libraries(MixMindAI PRIVATE
-    # JUCE core
-    juce::juce_core
-    juce::juce_audio_basics
-    juce::juce_audio_devices
-    juce::juce_audio_formats
-    juce::juce_audio_processors
-    juce::juce_events
-    
-    # Tracktion Engine
-    tracktion_engine
-    
-    # VST3 SDK
-    sdk
-    sdk_hosting
-    sdk_common
-    
-    # JSON processing
+    # JSON processing (always available)
     nlohmann_json::nlohmann_json
 )
+
+# Link heavy audio dependencies only when not minimal
+if(NOT MIXMIND_MINIMAL)
+    target_link_libraries(MixMindAI PRIVATE
+        # JUCE core
+        juce::juce_core
+        juce::juce_audio_basics
+        juce::juce_audio_devices
+        juce::juce_audio_formats
+        juce::juce_audio_processors
+        juce::juce_events
+        
+        # Tracktion Engine
+        tracktion_engine
+        
+        # VST3 SDK
+        sdk
+        sdk_hosting
+        sdk_common
+    )
+endif()
 
 # Generate compile_commands.json for IDE support
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
