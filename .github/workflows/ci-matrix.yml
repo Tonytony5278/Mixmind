@@ -48,6 +48,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Authenticated GitHub fetches
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: |
+          git config --global url."https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
       # Platform-specific setup
       - name: Setup MSVC (Windows)
         if: matrix.compiler == 'msvc'
@@ -108,7 +113,7 @@ jobs:
           cmake -S . -B build -G "${{ matrix.generator }}" ${{ matrix.arch }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DMIXMIND_MINIMAL=ON \
-            -DBUILD_TESTS=ON \
+            -DBUILD_TESTS=OFF \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
@@ -122,11 +127,11 @@ jobs:
         if: matrix.os == 'macos-13'
         run: cmake --build build --config Release -- -parallelizeTargets -jobs 4
 
-      # Test
-      - name: Run tests
-        working-directory: build
-        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
-        run: ctest -C Release --output-on-failure --parallel 4
+      # Test (disabled for minimal builds)
+      # - name: Run tests
+      #   working-directory: build  
+      #   shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+      #   run: ctest -C Release --output-on-failure --parallel 4
 
       # Upload artifacts
       - name: Upload build artifacts

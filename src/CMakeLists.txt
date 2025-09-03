@@ -3,15 +3,21 @@ add_subdirectory(core)
 add_subdirectory(adapters)
 add_subdirectory(services)
 add_subdirectory(midi)        # MIDI processing for instrument tracks
-add_subdirectory(vsti)        # VST instrument hosting
-add_subdirectory(tracks)      # Instrument track implementation
-add_subdirectory(vst3)        # Real VST3 integration
+
+# Heavy audio dependencies (VST3, VSTI) - only when not minimal
+if(NOT MIXMIND_MINIMAL)
+    add_subdirectory(vsti)        # VST instrument hosting
+    add_subdirectory(tracks)      # Instrument track implementation  
+    add_subdirectory(vst3)        # Real VST3 integration
+endif()
 # add_subdirectory(api)      # Temporarily disabled for VST3 proof
 add_subdirectory(ai)
 # add_subdirectory(ui)       # Temporarily disabled for VST3 proof
 
-# E2E Tests for VST3 proof
-add_subdirectory(../tests/e2e ${CMAKE_CURRENT_BINARY_DIR}/e2e_tests)
+# E2E Tests for VST3 proof (only when not minimal)
+if(NOT MIXMIND_MINIMAL)
+    add_subdirectory(../tests/e2e ${CMAKE_CURRENT_BINARY_DIR}/e2e_tests)
+endif()
 
 # Main application sources
 target_sources(MixMindAI PRIVATE
