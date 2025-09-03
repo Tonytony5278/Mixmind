@@ -180,6 +180,10 @@ if(MIXMIND_MINIMAL)
   # Ultra-minimal stub for CI success (no dependencies)
   set(MIXMIND_SOURCES_CORE
     src/main_minimal.cpp
+    # Real-time audio core (headers only, compile test)
+    src/audio/rt/SpscRing.h
+    src/audio/rt/RtAllocator.h
+    src/audio/rt/AudioThreadChecks.h
   )
 else()
   # Full application sources
@@ -192,6 +196,10 @@ else()
     src/core/async.h
     src/core/result.h
     src/core/types.h
+    # Real-time audio core (headers only, both builds)
+    src/audio/rt/SpscRing.h
+    src/audio/rt/RtAllocator.h
+    src/audio/rt/AudioThreadChecks.h
     # APIs
     src/api/ActionAPI.cpp
     src/api/ActionAPI.h
