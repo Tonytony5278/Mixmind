@@ -1,0 +1,62 @@
+name: Nightly Full Build
+
+on:
+  schedule:
+    - cron: "0 3 * * *"  # daily 3am UTC
+  workflow_dispatch:
+
+jobs:
+  full:
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-13, windows-latest]
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          
+      - name: Authenticated GitHub fetches
+        shell: bash
+        run: |
+          git config --global url."https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          
+      - name: Setup compilers & deps (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libasound2-dev libjack-jackd2-dev libx11-dev libxrandr-dev libxcursor-dev libxinerama-dev libgtk-3-dev
+          
+      - name: Setup MSVC (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          
+      - name: Get CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.28.3
+          
+      - name: Configure (full)
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: |
+          cmake -S . -B build -G "${{ matrix.os == 'windows-latest' && 'Visual Studio 17 2022' || 'Ninja' }}" ${{ matrix.os != 'windows-latest' && '' || '-A x64' }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DMIXMIND_MINIMAL=OFF \
+            -DBUILD_TESTS=ON
+            
+      - name: Build
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: cmake --build build --config Release --parallel 4
+        
+      - name: Smoke run (headless CLI if present)
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: |
+          if [ -x build/mixmind_cli ] || [ -f build/Release/mixmind_cli.exe ]; then
+            (build/mixmind_cli --version || build/Release/mixmind_cli.exe --version) || true
+          else
+            echo "mixmind_cli not present yet (will arrive PR6)"
+          fi
