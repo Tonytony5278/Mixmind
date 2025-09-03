@@ -113,7 +113,7 @@ jobs:
           cmake -S . -B build -G "${{ matrix.generator }}" ${{ matrix.arch }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DMIXMIND_MINIMAL=ON \
-            -DBUILD_TESTS=OFF \
+            -DBUILD_TESTS=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
@@ -127,11 +127,11 @@ jobs:
         if: matrix.os == 'macos-13'
         run: cmake --build build --config Release -- -parallelizeTargets -jobs 4
 
-      # Test (disabled for minimal builds)
-      # - name: Run tests
-      #   working-directory: build  
-      #   shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
-      #   run: ctest -C Release --output-on-failure --parallel 4
+      # Test
+      - name: Run tests
+        working-directory: build  
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: ctest -C Release --output-on-failure --parallel 4
 
       # Upload artifacts
       - name: Upload build artifacts

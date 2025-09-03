@@ -170,10 +170,51 @@ endif()
 # Source Code Organization
 ###########################################
 
-# Create main executable
-add_executable(MixMindAI)
+# Build sources: start with the lightweight core that always builds
+set(MIXMIND_SOURCES_CORE
+  src/main.cpp
+  src/MixMindApp.cpp
+  src/MixMindApp.h
+  # Core utilities (always lightweight)
+  src/core/async.cpp
+  src/core/async.h
+  src/core/result.h
+  src/core/types.h
+  # APIs and AI (lightweight)
+  src/api/ActionAPI.cpp
+  src/api/ActionAPI.h
+  src/api/ActionSchemas.h
+  src/ai/ActionAPI.cpp
+  src/ai/ActionAPI.h
+  src/ai/ChatService.cpp
+  # MIDI processing (lightweight)
+  src/midi/MIDIClip.cpp
+  src/midi/MIDINoteData.cpp
+  src/midi/ControllerLaneData.cpp
+)
 
-# Add subdirectories for source code
+# Heavy sources that require external libs (excluded for minimal CI)
+set(MIXMIND_SOURCES_HEAVY
+  src/services/LibEBU128Service.cpp
+  src/services/TagLibService.cpp
+  src/services/KissFFTService.cpp
+  src/services/OSCService.cpp
+  src/services/TimeStretchService.cpp
+  src/adapters/tracktion/TERenderService.cpp
+  src/adapters/tracktion/TEVSTScanner.cpp
+  src/vst3/RealVST3Scanner.cpp
+  src/vsti/VSTiHost.cpp
+)
+
+if(NOT MIXMIND_MINIMAL)
+  list(APPEND MIXMIND_SOURCES_CORE ${MIXMIND_SOURCES_HEAVY})
+endif()
+
+# Create main executable with conditional sources
+add_executable(MixMindAI ${MIXMIND_SOURCES_CORE})
+target_compile_definitions(MixMindAI PRIVATE MIXMIND_MINIMAL=$<BOOL:${MIXMIND_MINIMAL}>)
+
+# Add subdirectories for remaining source code
 add_subdirectory(src)
 
 # Link essential libraries to main executable
