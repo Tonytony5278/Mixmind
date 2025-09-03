@@ -270,6 +270,16 @@ if(NOT MIXMIND_MINIMAL)
     )
 endif()
 
+# Command-line tools (only when not minimal)
+if(NOT MIXMIND_MINIMAL)
+    # MixMind CLI Renderer
+    add_executable(mixmind_cli apps/mixmind_cli/main.cpp)
+    target_compile_features(mixmind_cli PRIVATE cxx_std_20)
+    
+    # Link engine targets when available (future expansion)
+    # target_link_libraries(mixmind_cli PRIVATE mixmind_engine)
+endif()
+
 # Generate compile_commands.json for IDE support
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
