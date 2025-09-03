@@ -132,18 +132,40 @@ endif()
 ###########################################
 
 if(BUILD_TESTS)
+    # Catch2 test framework (modern, header-only approach)
     FetchContent_Declare(
-        googletest
-        GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG v1.14.0
-        SOURCE_DIR ${DEPS_DIR}/googletest
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.4.0
+        SOURCE_DIR ${DEPS_DIR}/catch2
     )
-    
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(googletest)
+    FetchContent_MakeAvailable(Catch2)
     
     enable_testing()
-    include(GoogleTest)
+    list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+    include(CTest)
+    include(Catch)
+    
+    # Create MixMindTests executable
+    add_executable(MixMindTests
+        tests/test_project_roundtrip.cpp
+        tests/test_midi_props.cpp
+        tests/test_cli_render.cpp
+    )
+    
+    target_link_libraries(MixMindTests PRIVATE
+        Catch2::Catch2WithMain
+    )
+    
+    # Register tests with CTest
+    catch_discover_tests(MixMindTests)
+    
+    # Test target for easy execution
+    add_custom_target(run_tests
+        COMMAND ${CMAKE_CTEST_COMMAND} --verbose
+        DEPENDS MixMindTests
+        COMMENT "Running all tests with CTest"
+    )
 endif()
 
 ###########################################
