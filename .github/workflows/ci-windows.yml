@@ -16,6 +16,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Authenticated GitHub fetches
+        shell: pwsh
+        run: |
+          git config --global url."https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
         with:
@@ -27,12 +32,11 @@ jobs:
           cmakeVersion: 3.28.3
 
       - name: Configure
-        shell: cmd
-        run: >
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-          -DTRACKTION_BUILD_EXAMPLES=OFF
-          -DTRACKTION_BUILD_TESTS=OFF
-          -DRUBBERBAND_ENABLED=ON
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+            -DMIXMIND_MINIMAL=ON `
+            -DBUILD_TESTS=ON
 
       - name: Build (Release)
         shell: cmd

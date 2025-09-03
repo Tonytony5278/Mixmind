@@ -28,8 +28,13 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Authenticated GitHub fetches
+      shell: bash
+      run: |
+        git config --global url."https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
 
@@ -44,12 +49,12 @@ jobs:
       run: |
         cmake -S . -B build -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
-          -DTRACKTION_BUILD_EXAMPLES=OFF \
-          -DTRACKTION_BUILD_TESTS=OFF
+          -DMIXMIND_MINIMAL=ON \
+          -DBUILD_TESTS=ON
 
     - name: Build (C++)
       if: matrix.language == 'cpp'
       run: cmake --build build
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3

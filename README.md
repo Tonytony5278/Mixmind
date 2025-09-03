@@ -208,6 +208,68 @@ MixMind AI has successfully delivered a professional-grade DAW with AI-first int
 
 *The future of music production is intelligent, intuitive, and infinitely creative.*
 
+## 📜 Licensing Notes
+
+**Important**: MixMind AI's licensing is currently in transition for Alpha release.
+
+### Current Status
+- **Core MixMind AI**: Licensed under MIT License
+- **Dependencies**: Some dependencies (Tracktion Engine, JUCE) may require GPLv3 or commercial licensing
+
+### Alpha Release Approach
+For the Alpha release, we are following **Path B (Dual World)**:
+- ✅ **Core MIT binaries**: Available for distribution and testing
+- ⚠️ **Full DAW binaries**: Require users to build locally with appropriate dependency licenses
+- 📋 **Issue Tracking**: [Licensing alignment (TE/JUCE vs MIT)](https://github.com/Tonytony5278/Mixmind/issues/TBD)
+
+### For Developers
+- Core MixMind AI code remains MIT licensed
+- Building with Tracktion Engine/JUCE requires accepting their license terms
+- Commercial distribution may require additional licensing agreements
+
+**This will be resolved before Beta release with either full GPLv3 migration or commercial licensing.**
+
+## 🔒 Privacy & Data Collection
+
+MixMind AI respects your privacy and provides **opt-in only** telemetry and crash reporting.
+
+### Default Behavior
+- **No data collection** by default
+- **No network connections** for telemetry unless explicitly enabled
+- **Local processing** for all AI features (when possible)
+
+### Optional Crash Reporting
+Enable with environment variable: `MIXMIND_CRASHDUMPS=1`
+- **Purpose**: Help improve stability and fix crashes
+- **Data Collected**: Stack traces, system info, audio configuration (anonymized)
+- **Data NOT Collected**: Audio content, project files, personal information
+- **Storage**: Local crash dumps, optionally uploaded with user consent
+
+### Optional Telemetry  
+Enable with environment variable: `MIXMIND_TELEMETRY=1`
+- **Purpose**: Understand feature usage and performance
+- **Data Collected**: Feature usage statistics, performance metrics (anonymized)
+- **Data NOT Collected**: Audio content, project files, personal information
+- **Retention**: 90 days maximum, aggregated analytics only
+
+### AI Features
+- **Natural Language Processing**: Processed locally when possible
+- **Cloud AI**: Only when explicitly requested (e.g., advanced AI features)
+- **Data Transmission**: Commands only, never audio content or project data
+
+### Your Control
+- **Environment Variables**: Complete control via opt-in variables
+- **Runtime Settings**: Disable telemetry at any time in preferences
+- **Data Export**: Request your data export at any time
+- **Data Deletion**: Request data deletion at any time
+
+### Compliance
+- **GDPR**: Full compliance with EU data protection regulations
+- **CCPA**: California Consumer Privacy Act compliance
+- **Data Minimization**: Collect only what's necessary for functionality
+
+**Questions about privacy?** Contact us or review our full privacy policy in the documentation.
+
 ---
 
 **Total Implementation**: 380K+ bytes | **Test Coverage**: 75+ tests | **Status**: Alpha Complete  

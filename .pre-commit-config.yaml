@@ -1,0 +1,83 @@
+# See https://pre-commit.com for more information
+repos:
+  # General file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: end-of-file-fixer
+        exclude: '.*\.(patch|diff)$'
+      - id: trailing-whitespace
+        exclude: '.*\.(patch|diff)$'
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-xml
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # C/C++ formatting
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v18.1.2
+    hooks:
+      - id: clang-format
+        files: \.(c|cc|cxx|cpp|h|hpp|hxx)$
+        args: ['-style=file', '-i']
+
+  # Spell checking
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+      - id: codespell
+        args: [
+          '--ignore-words-list=mixmind,vsti,lufs,ebu,daw',
+          '--skip=*.git,*.svg,*.lock,*_deps,build',
+          '--check-filenames',
+          '--check-hidden'
+        ]
+
+  # CMake formatting
+  - repo: https://github.com/cheshirekow/cmake-format-precommit
+    rev: v0.6.13
+    hooks:
+      - id: cmake-format
+        args: [--in-place]
+      - id: cmake-lint
+        args: [--disabled-codes=C0103,C0111]
+
+  # Python formatting (for build scripts)
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        files: \.py$
+
+  # Markdown formatting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.38.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix']
+        exclude: '^CHANGELOG\.md$'
+
+  # Check for large files
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=1000']  # Allow up to 1MB files
+
+# Configure pre-commit to skip certain paths
+exclude: |
+  (?x)^(
+    build/.*|
+    \.git/.*|
+    .*_deps/.*|
+    \.vscode/.*|
+    \.vs/.*|
+    third_party/.*|
+    external/.*
+  )$

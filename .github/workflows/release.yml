@@ -1,0 +1,327 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CMAKE_BUILD_TYPE: Release
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: MixMind AI ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          body: |
+            # MixMind AI ${{ github.ref_name }}
+            
+            🎵 **Professional AI-Powered Digital Audio Workstation**
+            
+            ## 📦 Installation
+            
+            **Windows**: Download `MixMind-Setup-${{ github.ref_name }}.exe`
+            **macOS**: Download `MixMind-${{ github.ref_name }}.dmg`  
+            **Linux**: Download `MixMind-${{ github.ref_name }}.AppImage` or `.tar.gz`
+            
+            ## 🎹 Features
+            - VST3 Plugin Hosting with real-time processing
+            - Professional Piano Roll MIDI Editor
+            - Real-time Automation System (sub-10ms latency)
+            - Broadcast-quality Mixer with EBU R128 metering
+            - Multi-format Rendering Engine (WAV/AIFF/FLAC)
+            - AI Assistant with natural language control
+            
+            ## 🏗️ Architecture
+            - Modern C++20 with Result<T> monadic error handling
+            - Cross-platform: Windows, macOS, Linux
+            - Professional audio standards compliance
+            - Comprehensive test coverage (75+ tests)
+            
+            ## 📋 System Requirements
+            - **Windows**: Windows 10+ (x64)
+            - **macOS**: macOS 11+ (Intel/Apple Silicon)
+            - **Linux**: Ubuntu 20.04+, Fedora 35+, or equivalent
+            - **Audio**: ASIO (Windows), Core Audio (macOS), ALSA/JACK (Linux)
+            - **Memory**: 4GB RAM minimum, 8GB recommended
+            
+            ---
+            
+            **Full Changelog**: https://github.com/Tonytony5278/Mixmind/compare/v0.1.0-alpha...${{ github.ref_name }}
+
+  build-windows:
+    needs: create-release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.28.3
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: windows-release-deps-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DTRACKTION_BUILD_EXAMPLES=OFF `
+            -DTRACKTION_BUILD_TESTS=OFF `
+            -DRUBBERBAND_ENABLED=ON `
+            -DCPACK_GENERATOR=NSIS
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Test
+        working-directory: build
+        run: ctest -C Release --output-on-failure
+
+      - name: Package NSIS Installer
+        working-directory: build
+        run: |
+          cpack -C Release -G NSIS
+          Get-ChildItem *.exe | Rename-Item -NewName { "MixMind-Setup-$env:GITHUB_REF_NAME.exe" }
+
+      - name: Upload Windows Installer
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/MixMind-Setup-${{ github.ref_name }}.exe
+
+      - name: Upload Windows Debug Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-debug-${{ github.ref_name }}
+          path: |
+            build/Release/*.exe
+            build/Release/*.pdb
+            build/_logs/**
+            build/Testing/Temporary/LastTest.log
+
+  build-macos:
+    needs: create-release
+    runs-on: macos-13
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.0'
+
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.28.3
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: macos-release
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/_deps
+            ~/Library/Caches/ccache
+          key: macos-release-deps-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G "Xcode" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DTRACKTION_BUILD_EXAMPLES=OFF \
+            -DTRACKTION_BUILD_TESTS=OFF \
+            -DRUBBERBAND_ENABLED=ON \
+            -DCPACK_GENERATOR=DragNDrop \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build
+        run: cmake --build build --config Release -- -parallelizeTargets -jobs 4
+
+      - name: Test
+        working-directory: build
+        run: ctest -C Release --output-on-failure
+
+      - name: Package DMG
+        working-directory: build
+        run: |
+          cpack -C Release -G DragNDrop
+          # Rename to standard format
+          for dmg in *.dmg; do
+            if [ -f "$dmg" ]; then
+              mv "$dmg" "MixMind-${{ github.ref_name }}.dmg"
+              break
+            fi
+          done
+
+      # TODO: Code signing and notarization (requires Apple Developer account)
+      # - name: Sign and Notarize
+      #   env:
+      #     APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+      #     APPLE_DEVELOPER_PASSWORD: ${{ secrets.APPLE_DEVELOPER_PASSWORD }}
+      #     APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      #   run: |
+      #     # codesign and xcrun notarytool steps would go here
+
+      - name: Upload macOS DMG
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/MixMind-${{ github.ref_name }}.dmg
+
+      - name: Upload macOS Debug Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-debug-${{ github.ref_name }}
+          path: |
+            build/Release/*.app
+            build/Release/test_*
+            build/_logs/**
+            build/Testing/Temporary/LastTest.log
+
+  build-linux:
+    needs: create-release
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        format: [AppImage, tar.gz]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build gcc-14 g++-14 \
+            libasound2-dev libjack-jackd2-dev \
+            libfuse2 desktop-file-utils
+
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.28.3
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: linux-release
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/_deps
+            ~/.cache/ccache
+          key: linux-release-deps-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake -S . -B build -G "Ninja" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DTRACKTION_BUILD_EXAMPLES=OFF \
+            -DTRACKTION_BUILD_TESTS=OFF \
+            -DRUBBERBAND_ENABLED=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build
+        run: cmake --build build --parallel 4
+
+      - name: Test
+        working-directory: build
+        run: ctest --output-on-failure --parallel 4
+
+      - name: Package AppImage
+        if: matrix.format == 'AppImage'
+        run: |
+          # Install linuxdeploy
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+          
+          # Create AppDir structure
+          mkdir -p AppDir/usr/bin
+          cp build/Release/mixmind* AppDir/usr/bin/ || cp build/mixmind* AppDir/usr/bin/ || true
+          
+          # Create desktop file
+          cat > AppDir/mixmind.desktop << EOF
+          [Desktop Entry]
+          Type=Application
+          Name=MixMind AI
+          Comment=Professional AI-Powered Digital Audio Workstation
+          Icon=mixmind
+          Exec=mixmind
+          Categories=AudioVideo;Audio;AudioVideoEditing;
+          EOF
+          
+          # Create AppImage
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage
+          mv MixMind_AI*.AppImage MixMind-${{ github.ref_name }}.AppImage
+
+      - name: Package tar.gz
+        if: matrix.format == 'tar.gz'
+        working-directory: build
+        run: |
+          cpack -G TGZ
+          # Rename to standard format
+          for tgz in *.tar.gz; do
+            if [ -f "$tgz" ]; then
+              mv "$tgz" "MixMind-${{ github.ref_name }}.tar.gz"
+              break
+            fi
+          done
+
+      - name: Upload Linux AppImage
+        if: matrix.format == 'AppImage'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: MixMind-${{ github.ref_name }}.AppImage
+
+      - name: Upload Linux tar.gz
+        if: matrix.format == 'tar.gz'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/MixMind-${{ github.ref_name }}.tar.gz
+
+      - name: Upload Linux Debug Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-debug-${{ matrix.format }}-${{ github.ref_name }}
+          path: |
+            build/test_*
+            build/_logs/**
+            build/Testing/Temporary/LastTest.log

@@ -1,0 +1,46 @@
+name: pre-commit
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang-format-18 \
+            cmake \
+            cppcheck
+
+      - name: Run pre-commit
+        continue-on-error: true
+        run: |
+          # Install pre-commit and run hooks
+          pip install pre-commit
+          
+          # Run pre-commit on all files, but don't fail the workflow
+          echo "Running pre-commit hooks (advisory)..."
+          pre-commit run --all-files --show-diff-on-failure || {
+            echo "::warning::Some pre-commit hooks failed, but this is advisory for minimal builds"
+            echo "Pre-commit issues detected - see output above for details"
+            exit 0
+          }
+          echo "All pre-commit hooks passed!"
+
+      - name: Pre-commit summary
+        if: always()
+        run: |
+          echo "Pre-commit analysis completed (advisory mode)"

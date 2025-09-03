@@ -24,7 +24,6 @@ target_sources(mixmind_ai INTERFACE
 target_link_libraries(mixmind_ai PUBLIC
     mixmind_core
     mixmind_services
-    whisper
     
     # HTTP client for OpenAI API
     httplib::httplib
@@ -32,6 +31,11 @@ target_link_libraries(mixmind_ai PUBLIC
     # JSON processing
     nlohmann_json
 )
+
+# Heavy AI dependencies (whisper speech recognition)
+if(NOT MIXMIND_MINIMAL)
+    target_link_libraries(mixmind_ai PUBLIC whisper)
+endif()
 
 if(ONNX_ENABLED)
     target_link_libraries(mixmind_ai PUBLIC onnxruntime)
