@@ -37,3 +37,4 @@ __pycache__/
 assets/**/*.wav
 assets/**/*.flac
 assets/**/*.mp3
+build_test_minimal/
