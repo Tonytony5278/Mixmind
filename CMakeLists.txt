@@ -86,24 +86,27 @@ if(NOT MIXMIND_MINIMAL)
     FetchContent_MakeAvailable(vst3sdk)
 endif()
 
-# Essential JSON support
-FetchContent_Declare(
-    nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.3
-    SOURCE_DIR ${DEPS_DIR}/nlohmann_json
-)
-FetchContent_MakeAvailable(nlohmann_json)
+# Lightweight dependencies (only when not minimal)  
+if(NOT MIXMIND_MINIMAL)
+    # Essential JSON support
+    FetchContent_Declare(
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
+        SOURCE_DIR ${DEPS_DIR}/nlohmann_json
+    )
+    FetchContent_MakeAvailable(nlohmann_json)
 
-# HTTP library for AI integration
-FetchContent_Declare(
-    httplib
-    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-    GIT_TAG v0.15.3
-    SOURCE_DIR ${DEPS_DIR}/httplib
-)
-set(HTTPLIB_REQUIRE_OPENSSL OFF)
-FetchContent_MakeAvailable(httplib)
+    # HTTP library for AI integration
+    FetchContent_Declare(
+        httplib
+        GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+        GIT_TAG v0.15.3
+        SOURCE_DIR ${DEPS_DIR}/httplib
+    )
+    set(HTTPLIB_REQUIRE_OPENSSL OFF)
+    FetchContent_MakeAvailable(httplib)
+endif()
 
 # Time stretching libraries
 # SoundTouch (temporarily disabled for PoC)
@@ -172,17 +175,32 @@ endif()
 # Source Code Organization
 ###########################################
 
-# Ultra-minimal core for CI success (only essential files that compile)
-set(MIXMIND_SOURCES_CORE
-  src/main.cpp
-  src/MixMindApp.cpp
-  src/MixMindApp.h
-  # Core utilities (minimal set)
-  src/core/async.cpp
-  src/core/async.h
-  src/core/result.h
-  src/core/types.h
-)
+# Conditional source sets based on build mode
+if(MIXMIND_MINIMAL)
+  # Ultra-minimal stub for CI success (no dependencies)
+  set(MIXMIND_SOURCES_CORE
+    src/main_minimal.cpp
+  )
+else()
+  # Full application sources
+  set(MIXMIND_SOURCES_CORE
+    src/main.cpp
+    src/MixMindApp.cpp
+    src/MixMindApp.h
+    # Core utilities
+    src/core/async.cpp
+    src/core/async.h
+    src/core/result.h
+    src/core/types.h
+    # APIs
+    src/api/ActionAPI.cpp
+    src/api/ActionAPI.h
+    src/api/ActionSchemas.h
+    # MIDI processing
+    src/midi/MIDIClip.cpp
+    src/midi/MIDIProcessor.cpp
+  )
+endif()
 
 # Heavy sources that require external libs (excluded for minimal CI)
 set(MIXMIND_SOURCES_HEAVY
@@ -218,18 +236,18 @@ endif()
 add_executable(MixMindAI ${MIXMIND_SOURCES_CORE})
 target_compile_definitions(MixMindAI PRIVATE MIXMIND_MINIMAL=$<BOOL:${MIXMIND_MINIMAL}>)
 
-# Add subdirectories for remaining source code
-if(MIXMIND_MINIMAL)
-    add_subdirectory(src EXCLUDE_FROM_ALL)
-else()
+# Add subdirectories for remaining source code (only when not minimal)
+if(NOT MIXMIND_MINIMAL)
     add_subdirectory(src)
 endif()
 
-# Link essential libraries to main executable
-target_link_libraries(MixMindAI PRIVATE
-    # JSON processing (always available)
-    nlohmann_json::nlohmann_json
-)
+# Link libraries to main executable (conditional)
+if(NOT MIXMIND_MINIMAL)
+    target_link_libraries(MixMindAI PRIVATE
+        # JSON processing
+        nlohmann_json::nlohmann_json
+    )
+endif()
 
 # Link heavy audio dependencies only when not minimal
 if(NOT MIXMIND_MINIMAL)
