@@ -151,6 +151,9 @@ if(BUILD_TESTS)
         tests/test_project_roundtrip.cpp
         tests/test_midi_props.cpp
         tests/test_cli_render.cpp
+        tests/test_action_pipeline.cpp
+        src/ai/ActionReducer.cpp
+        src/ai/ActionPipeline.cpp
     )
     
     target_link_libraries(MixMindTests PRIVATE
