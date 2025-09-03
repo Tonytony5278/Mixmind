@@ -1,0 +1,10 @@
+^C:\USERS\ANTOI\DESKTOP\REAPER-AI-PILOT\BUILD_TEST_MINIMAL\CMAKEFILES\E36349695EA70A2ABCB6C01113257595\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/antoi/Desktop/reaper-ai-pilot -BC:/Users/antoi/Desktop/reaper-ai-pilot/build_test_minimal --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/antoi/Desktop/reaper-ai-pilot/build_test_minimal/MixMindAI.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

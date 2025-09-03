@@ -45,24 +45,19 @@ if(NOT MIXMIND_MINIMAL)
     # Link to main application
     target_link_libraries(MixMindAI PRIVATE mixmind_services)
 else()
-    # Minimal Services Library (no heavy dependencies)
-    add_library(mixmind_services STATIC
-        # Headers only for minimal build
-        IOSSService.h
-        ONNXService.h
-        OSSServiceRegistry.h
-    )
+    # Minimal Services Library (interface only for CI builds)
+    add_library(mixmind_services INTERFACE)
 
-    target_link_libraries(mixmind_services PUBLIC
+    target_link_libraries(mixmind_services INTERFACE
         mixmind_core
     )
 
-    target_include_directories(mixmind_services PUBLIC
+    target_include_directories(mixmind_services INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/..
     )
 
-    target_compile_features(mixmind_services PUBLIC cxx_std_20)
+    target_compile_features(mixmind_services INTERFACE cxx_std_20)
 
     # Link to main application
     target_link_libraries(MixMindAI PRIVATE mixmind_services)

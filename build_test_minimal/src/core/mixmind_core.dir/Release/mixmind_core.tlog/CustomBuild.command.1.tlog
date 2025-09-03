@@ -1,0 +1,10 @@
+^C:\USERS\ANTOI\DESKTOP\REAPER-AI-PILOT\SRC\CORE\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/antoi/Desktop/reaper-ai-pilot -BC:/Users/antoi/Desktop/reaper-ai-pilot/build_test_minimal --check-stamp-file C:/Users/antoi/Desktop/reaper-ai-pilot/build_test_minimal/src/core/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
