@@ -15,9 +15,9 @@ def main():
     
     # Check if we're in the right directory
     expected_files = [
-        "MixMind_Alpha_Setup.bat",
-        "Build_MixMind_Alpha.bat", 
-        "Launch_MixMind_Alpha.bat",
+        "setup/scripts/MixMind_Alpha_Setup.bat",
+        "setup/scripts/Build_MixMind_Alpha.bat", 
+        "setup/scripts/Launch_MixMind_Alpha.bat",
         "CMakeLists.txt",
         "README.md"
     ]
@@ -57,11 +57,11 @@ def main():
     # Check Python validation scripts
     print("\n[VALIDATION] Checking validation scripts...")
     validation_scripts = [
-        "python_test_piano_roll.py",
-        "python_test_automation.py", 
-        "python_test_mixer.py",
-        "python_test_render.py",
-        "python_test_ai_assistant.py"
+        "setup/validation/python_test_piano_roll.py",
+        "setup/validation/python_test_automation.py", 
+        "setup/validation/python_test_mixer.py",
+        "setup/validation/python_test_render.py",
+        "setup/validation/python_test_ai_assistant.py"
     ]
     
     for script in validation_scripts:

@@ -143,11 +143,11 @@ echo    Running Complete Alpha Validation
 echo ==================================================
 echo.
 echo Running Python validation scripts...
-python python_test_piano_roll.py
-python python_test_automation.py
-python python_test_mixer.py
-python python_test_render.py
-python python_test_ai_assistant.py
+python setup\validation\python_test_piano_roll.py
+python setup\validation\python_test_automation.py
+python setup\validation\python_test_mixer.py
+python setup\validation\python_test_render.py
+python setup\validation\python_test_ai_assistant.py
 echo.
 echo ==================================================
 echo    Alpha Validation Complete

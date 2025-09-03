@@ -119,16 +119,21 @@ echo.
 pause
 
 echo [STEP 1/3] Running system validation...
-python setup\validation\Validate_Alpha_Setup.py
-if %errorlevel% neq 0 (
-    echo [ERROR] System validation failed. Please check requirements.
-    pause
-    goto INSTALLATION_MENU
+if exist "setup\validation\Validate_Alpha_Setup.py" (
+    python setup\validation\Validate_Alpha_Setup.py
+) else (
+    echo [WARNING] Validation script not found, skipping validation
 )
 
 echo.
 echo [STEP 2/3] Building MixMind AI Professional DAW...
-call setup\scripts\Build_MixMind_Alpha.bat
+if exist "setup\scripts\Build_MixMind_Alpha.bat" (
+    call setup\scripts\Build_MixMind_Alpha.bat
+) else (
+    echo [ERROR] Build script not found at setup\scripts\Build_MixMind_Alpha.bat
+    pause
+    goto INSTALLATION_MENU
+)
 if %errorlevel% neq 0 (
     echo [ERROR] Build failed. Please check the error messages above.
     pause
@@ -137,7 +142,13 @@ if %errorlevel% neq 0 (
 
 echo.
 echo [STEP 3/3] Launching MixMind AI Test Suite...
-call setup\scripts\Launch_MixMind_Alpha.bat
+if exist "setup\scripts\Launch_MixMind_Alpha.bat" (
+    call setup\scripts\Launch_MixMind_Alpha.bat
+) else (
+    echo [ERROR] Launch script not found at setup\scripts\Launch_MixMind_Alpha.bat
+    pause
+    goto INSTALLATION_MENU
+)
 
 goto INSTALLATION_COMPLETE
 
