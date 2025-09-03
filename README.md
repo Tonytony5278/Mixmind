@@ -2,10 +2,12 @@
 
 **Modern C++20 implementation of an AI-first Digital Audio Workstation**
 
+[![Windows CI](https://github.com/Tonytony5278/Mixmind/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/Tonytony5278/Mixmind/actions/workflows/ci-windows.yml)
 [![Status: Alpha Complete](https://img.shields.io/badge/Status-Alpha%20Complete-brightgreen)](https://github.com/Tonytony5278/Mixmind)
 [![Build System: CMake](https://img.shields.io/badge/Build-CMake-blue)](./CMakeLists.txt)
 [![Language: C++20](https://img.shields.io/badge/C%2B%2B-20-orange)](https://en.cppreference.com/w/cpp/20)
 [![Tests: 75+](https://img.shields.io/badge/Tests-75%2B-green)](./tests/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 ## 🎯 Vision
 **"Cursor meets Logic Pro"** - A chat-first DAW with total control, beautiful simplicity, and professional power.

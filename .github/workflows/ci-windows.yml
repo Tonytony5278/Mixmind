@@ -1,0 +1,54 @@
+name: ci-windows
+
+on:
+  push:
+    branches: [ main, alpha-freeze ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.28.3
+
+      - name: Configure
+        shell: cmd
+        run: >
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+          -DTRACKTION_BUILD_EXAMPLES=OFF
+          -DTRACKTION_BUILD_TESTS=OFF
+          -DRUBBERBAND_ENABLED=ON
+
+      - name: Build (Release)
+        shell: cmd
+        run: cmake --build build --config Release -- /m
+
+      - name: Run tests (ctest)
+        working-directory: build
+        shell: cmd
+        run: ctest -C Release --output-on-failure
+
+      - name: Upload artifacts (logs & exes)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            build/_logs/**
+            build/Release/*.exe
+            build/**/*.pdb
