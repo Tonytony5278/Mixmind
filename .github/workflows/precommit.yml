@@ -1,0 +1,35 @@
+name: pre-commit
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang-format-18 \
+            cmake \
+            cppcheck
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --all-files --show-diff-on-failure
+
+      - name: Annotate pre-commit failures
+        if: failure()
+        run: |
+          echo "::warning::Pre-commit hooks failed. Run 'pre-commit run --all-files' locally to fix issues."

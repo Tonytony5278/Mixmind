@@ -75,7 +75,17 @@ git checkout -b fix/issue-description
 - Add comprehensive tests for new functionality
 - Update documentation as needed
 
-3. **Test Thoroughly**
+3. **Pre-commit Setup**
+```bash
+# Install pre-commit hooks (one-time setup)
+pip install pre-commit
+pre-commit install
+
+# Manual run (optional - hooks run automatically on commit)
+pre-commit run --all-files
+```
+
+4. **Test Thoroughly**
 ```bash
 # Run all tests
 cmake --build build --target test
@@ -87,9 +97,10 @@ python setup/validation/python_test_*.py
 ./build/Release/test_automation.exe  # etc.
 ```
 
-4. **Submit Pull Request**
+5. **Submit Pull Request**
 - Use the PR template checklist
-- Ensure CI passes (Windows CI required)
+- Ensure all CI passes (cross-platform matrix + quality gates)
+- Pre-commit hooks must pass
 - Request review from @Tonytony5278
 
 ## 🏗️ Architecture Overview

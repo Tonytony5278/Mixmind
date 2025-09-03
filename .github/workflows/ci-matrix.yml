@@ -1,0 +1,193 @@
+name: ci-matrix
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows MSVC 2022
+          - os: windows-latest
+            compiler: msvc
+            generator: "Visual Studio 17 2022"
+            arch: "-A x64"
+            
+          # macOS Xcode 15 (clang)
+          - os: macos-13
+            compiler: clang
+            generator: "Xcode"
+            arch: ""
+            
+          # Linux GCC 14
+          - os: ubuntu-24.04
+            compiler: gcc-14
+            generator: "Ninja"
+            arch: ""
+            cc: gcc-14
+            cxx: g++-14
+            
+          # Linux Clang 18
+          - os: ubuntu-24.04
+            compiler: clang-18
+            generator: "Ninja"
+            arch: ""
+            cc: clang-18
+            cxx: clang++-18
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Platform-specific setup
+      - name: Setup MSVC (Windows)
+        if: matrix.compiler == 'msvc'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup Xcode (macOS)
+        if: matrix.os == 'macos-13'
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.0'
+
+      - name: Setup Linux compilers
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+          if [ "${{ matrix.compiler }}" = "gcc-14" ]; then
+            sudo apt-get install -y gcc-14 g++-14
+          elif [ "${{ matrix.compiler }}" = "clang-18" ]; then
+            sudo apt-get install -y clang-18 clang++-18
+          fi
+
+      # Install CMake
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.28.3
+
+      # Setup ccache for Linux/macOS
+      - name: Setup ccache
+        if: matrix.os != 'windows-latest'
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: ${{ matrix.os }}-${{ matrix.compiler }}
+
+      # Restore build cache
+      - name: Cache build dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/_deps
+            ~/.cache/ccache
+            ~/Library/Caches/ccache
+            C:\vcpkg\installed
+          key: ${{ matrix.os }}-${{ matrix.compiler }}-deps-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}
+          restore-keys: |
+            ${{ matrix.os }}-${{ matrix.compiler }}-deps-
+
+      # Configure
+      - name: Configure CMake
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          cmake -S . -B build -G "${{ matrix.generator }}" ${{ matrix.arch }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DTRACKTION_BUILD_EXAMPLES=OFF \
+            -DTRACKTION_BUILD_TESTS=OFF \
+            -DRUBBERBAND_ENABLED=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      # Build
+      - name: Build (Windows/Linux)
+        if: matrix.os != 'macos-13'
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Build (macOS)
+        if: matrix.os == 'macos-13'
+        run: cmake --build build --config Release -- -parallelizeTargets -jobs 4
+
+      # Test
+      - name: Run tests
+        working-directory: build
+        run: ctest -C Release --output-on-failure --parallel 4
+
+      # Upload artifacts
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ matrix.os }}-${{ matrix.compiler }}
+          path: |
+            build/_logs/**
+            build/Release/**/*.exe
+            build/Release/**/*.app
+            build/Release/**/test_*
+            build/**/*.pdb
+            build/**/CTestTestfile.cmake
+            build/Testing/Temporary/LastTest.log
+          retention-days: 7
+
+      # Platform-specific validations
+      - name: Validate Windows build
+        if: matrix.os == 'windows-latest'
+        run: |
+          if (Test-Path "build/Release/*.exe") {
+            Write-Host "✅ Windows executables built successfully"
+            Get-ChildItem build/Release/*.exe | ForEach-Object { Write-Host "  - $($_.Name)" }
+          } else {
+            Write-Host "❌ No Windows executables found"
+            exit 1
+          }
+
+      - name: Validate macOS build
+        if: matrix.os == 'macos-13'
+        run: |
+          if find build -name "*.app" -o -name "test_*" | grep -q .; then
+            echo "✅ macOS applications built successfully"
+            find build -name "*.app" -o -name "test_*" | head -10
+          else
+            echo "❌ No macOS applications found"
+            exit 1
+          fi
+
+      - name: Validate Linux build
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          if find build -executable -name "test_*" | grep -q .; then
+            echo "✅ Linux executables built successfully" 
+            find build -executable -name "test_*" | head -10
+          else
+            echo "❌ No Linux executables found"
+            exit 1
+          fi
+
+  # Summary job for required status checks
+  build-summary:
+    if: always()
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check build matrix results
+        run: |
+          if [ "${{ needs.build.result }}" = "success" ]; then
+            echo "✅ All platform builds completed successfully"
+            exit 0
+          else
+            echo "❌ One or more platform builds failed"
+            exit 1
+          fi

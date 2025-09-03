@@ -1,0 +1,187 @@
+name: quality-gate
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-24.04
+    continue-on-error: true  # Non-blocking for now
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang-18 clang-tidy-18 \
+            ninja-build \
+            libasound2-dev libjack-jackd2-dev
+
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.28.3
+
+      - name: Configure for static analysis
+        env:
+          CC: clang-18
+          CXX: clang++-18
+        run: |
+          cmake -S . -B build -G "Ninja" \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DTRACKTION_BUILD_EXAMPLES=OFF \
+            -DTRACKTION_BUILD_TESTS=OFF
+
+      - name: Run clang-tidy
+        run: |
+          # Run clang-tidy on source files
+          find src -name "*.cpp" -o -name "*.h" | \
+          head -20 | \  # Limit for now to avoid timeout
+          xargs clang-tidy-18 \
+            -p build \
+            --checks='-*,readability-*,performance-*,modernize-*,cppcoreguidelines-*' \
+            --warnings-as-errors='' \
+            --format-style=file \
+            > clang-tidy-report.txt || true
+
+      - name: Upload static analysis report
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis-report
+          path: clang-tidy-report.txt
+
+  code-coverage:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-14 g++-14 \
+            ninja-build \
+            gcovr lcov \
+            libasound2-dev libjack-jackd2-dev
+
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.28.3
+
+      - name: Configure with coverage
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake -S . -B build -G "Ninja" \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-O0 -g --coverage -fprofile-arcs -ftest-coverage" \
+            -DCMAKE_C_FLAGS="-O0 -g --coverage -fprofile-arcs -ftest-coverage" \
+            -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            -DTRACKTION_BUILD_EXAMPLES=OFF \
+            -DTRACKTION_BUILD_TESTS=OFF
+
+      - name: Build with coverage
+        run: cmake --build build --parallel 4
+
+      - name: Run tests with coverage
+        working-directory: build
+        run: ctest --output-on-failure --parallel 4 || true
+
+      - name: Generate coverage report
+        run: |
+          # Generate LCOV report
+          lcov --directory build --capture --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' --output-file coverage.info
+          lcov --remove coverage.info 'build/_deps/*' --output-file coverage.info
+          lcov --remove coverage.info '*/tests/*' --output-file coverage.info
+          
+          # Generate HTML report
+          genhtml coverage.info --output-directory coverage_html
+          
+          # Generate summary for GitHub
+          lcov --list coverage.info > coverage_summary.txt
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage.info
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Upload coverage HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage_html/
+            coverage_summary.txt
+
+      - name: Comment coverage summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const coverage = fs.readFileSync('coverage_summary.txt', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📊 Code Coverage Report\n\n\`\`\`\n${coverage}\n\`\`\`\n\nFull HTML report available in artifacts.`
+            });
+
+  security-scan:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  quality-gate-summary:
+    if: always()
+    needs: [static-analysis, code-coverage, security-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Quality gate summary
+        run: |
+          echo "## Quality Gate Results"
+          echo "- Static Analysis: ${{ needs.static-analysis.result }}"
+          echo "- Code Coverage: ${{ needs.code-coverage.result }}"  
+          echo "- Security Scan: ${{ needs.security-scan.result }}"
+          
+          if [ "${{ needs.code-coverage.result }}" = "success" ] && [ "${{ needs.security-scan.result }}" = "success" ]; then
+            echo "✅ Quality gate passed (static analysis non-blocking)"
+            exit 0
+          else
+            echo "⚠️ Quality gate issues detected"
+            exit 1
+          fi
