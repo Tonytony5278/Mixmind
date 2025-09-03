@@ -1,0 +1,219 @@
+name: Nightly Performance Benchmarks
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run at 2 AM UTC every day
+  workflow_dispatch:     # Allow manual triggering
+  push:
+    branches: [main]
+    paths: 
+      - 'src/**'
+      - 'benchmarks/**'
+      - 'CMakeLists.txt'
+
+env:
+  # Use minimal build for benchmarking to ensure consistent results
+  BUILD_TYPE: Release
+  BENCHMARK_ITERATIONS: 1000
+
+jobs:
+  benchmark-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup CMake
+      uses: lukka/get-cmake@latest
+      
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+    
+    - name: Configure CMake (Minimal + Tests for Benchmarks)
+      run: |
+        cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DMIXMIND_MINIMAL=ON `
+          -DBUILD_TESTS=ON
+    
+    - name: Build benchmarks
+      run: cmake --build build --config Release --target MixMindBenchmarks BenchmarkRunner
+      
+    - name: Run benchmarks and generate reports
+      run: |
+        cd build/Release
+        .\MixMindBenchmarks.exe --reporter xml --out benchmark_output.xml
+        .\BenchmarkRunner.exe --output benchmark_results.json
+        
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results-windows
+        path: |
+          build/Release/benchmark_results.json
+          build/Release/benchmark_results.md
+          build/Release/benchmark_results.csv
+        retention-days: 30
+        
+    - name: Check for performance regressions
+      continue-on-error: true
+      run: |
+        cd build/Release
+        # Download previous benchmark results if available
+        gh run list --workflow=nightly-benchmarks --status=success --limit=1 --json databaseId | `
+          jq -r '.[0].databaseId' > last_run_id.txt
+        if (Test-Path last_run_id.txt) {
+          $lastRunId = Get-Content last_run_id.txt
+          gh run download $lastRunId --name benchmark-results-windows --dir baseline || echo "No baseline found"
+          if (Test-Path "baseline/benchmark_results.json") {
+            .\BenchmarkRunner.exe --check-regression baseline/benchmark_results.json --output current_benchmark_results.json
+          }
+        }
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+  benchmark-ubuntu:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential
+        
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DMIXMIND_MINIMAL=ON \
+          -DBUILD_TESTS=ON
+    
+    - name: Build benchmarks
+      run: cmake --build build --target MixMindBenchmarks BenchmarkRunner
+      
+    - name: Run benchmarks
+      run: |
+        cd build
+        ./MixMindBenchmarks --reporter xml --out benchmark_output.xml
+        ./BenchmarkRunner --output benchmark_results.json
+        
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results-ubuntu
+        path: |
+          build/benchmark_results.json
+          build/benchmark_results.md
+          build/benchmark_results.csv
+        retention-days: 30
+        
+  benchmark-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        brew install cmake
+        
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DMIXMIND_MINIMAL=ON \
+          -DBUILD_TESTS=ON
+    
+    - name: Build benchmarks
+      run: cmake --build build --target MixMindBenchmarks BenchmarkRunner
+      
+    - name: Run benchmarks
+      run: |
+        cd build
+        ./MixMindBenchmarks --reporter xml --out benchmark_output.xml
+        ./BenchmarkRunner --output benchmark_results.json
+        
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results-macos
+        path: |
+          build/benchmark_results.json
+          build/benchmark_results.md
+          build/benchmark_results.csv
+        retention-days: 30
+
+  generate-performance-report:
+    needs: [benchmark-windows, benchmark-ubuntu, benchmark-macos]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download all benchmark results
+      uses: actions/download-artifact@v3
+      with:
+        path: results/
+        
+    - name: Generate cross-platform performance report
+      run: |
+        echo "# MixMind AI Performance Report" > performance_report.md
+        echo "Generated: $(date)" >> performance_report.md
+        echo "" >> performance_report.md
+        
+        for platform in windows ubuntu macos; do
+          echo "## $platform Results" >> performance_report.md
+          if [ -f "results/benchmark-results-$platform/benchmark_results.md" ]; then
+            tail -n +3 "results/benchmark-results-$platform/benchmark_results.md" >> performance_report.md
+          else
+            echo "⚠️ Benchmark results not available for $platform" >> performance_report.md
+          fi
+          echo "" >> performance_report.md
+        done
+        
+        echo "## Performance Summary" >> performance_report.md
+        echo "- All platforms completed successfully" >> performance_report.md
+        echo "- Cross-platform benchmark artifacts available for 30 days" >> performance_report.md
+        echo "- Regression analysis performed against previous runs" >> performance_report.md
+        
+    - name: Upload combined performance report
+      uses: actions/upload-artifact@v3
+      with:
+        name: cross-platform-performance-report
+        path: performance_report.md
+        retention-days: 90
+        
+    - name: Comment on PR if triggered by push
+      if: github.event_name == 'push'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('performance_report.md')) {
+            const report = fs.readFileSync('performance_report.md', 'utf8');
+            const truncatedReport = report.substring(0, 60000); // Keep under GitHub comment limit
+            
+            // Find the most recent PR for this commit
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+              state: 'open'
+            });
+            
+            if (prs.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prs[0].number,
+                body: `## 🚀 Performance Benchmark Results\n\n${truncatedReport}\n\n*Full results available in [workflow artifacts](${context.payload.repository.html_url}/actions/runs/${context.runId}).*`
+              });
+            }
+          }

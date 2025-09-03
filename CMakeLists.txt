@@ -166,6 +166,29 @@ if(BUILD_TESTS)
         DEPENDS MixMindTests
         COMMENT "Running all tests with CTest"
     )
+    
+    # Benchmark executable (includes Catch2 benchmarks)
+    add_executable(MixMindBenchmarks
+        benchmarks/bench_audio_processing.cpp
+        benchmarks/bench_midi_processing.cpp
+    )
+    
+    target_link_libraries(MixMindBenchmarks PRIVATE
+        Catch2::Catch2WithMain
+    )
+    
+    # Benchmark runner tool
+    add_executable(BenchmarkRunner
+        tools/benchmark_runner.cpp
+    )
+    
+    # Benchmark target for easy execution
+    add_custom_target(run_benchmarks
+        COMMAND ./MixMindBenchmarks --reporter xml --out benchmark_output.xml
+        COMMAND ./BenchmarkRunner --output benchmark_results.json
+        DEPENDS MixMindBenchmarks BenchmarkRunner
+        COMMENT "Running benchmarks and generating reports"
+    )
 endif()
 
 ###########################################
