@@ -199,6 +199,9 @@ else()
     # MIDI processing
     src/midi/MIDIClip.cpp
     src/midi/MIDIProcessor.cpp
+    # Plugin management
+    src/plugins/Quarantine.h
+    src/plugins/Quarantine.cpp
   )
 endif()
 
@@ -268,6 +271,13 @@ if(NOT MIXMIND_MINIMAL)
         sdk_hosting
         sdk_common
     )
+endif()
+
+# VST3 Scanner Tool (only when not minimal)
+if(NOT MIXMIND_MINIMAL)
+    add_executable(vst3_scanner tools/vst3_scanner/main.cpp)
+    target_link_libraries(vst3_scanner PRIVATE nlohmann_json::nlohmann_json)
+    target_compile_features(vst3_scanner PRIVATE cxx_std_20)
 endif()
 
 # Generate compile_commands.json for IDE support
