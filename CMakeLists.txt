@@ -215,7 +215,11 @@ add_executable(MixMindAI ${MIXMIND_SOURCES_CORE})
 target_compile_definitions(MixMindAI PRIVATE MIXMIND_MINIMAL=$<BOOL:${MIXMIND_MINIMAL}>)
 
 # Add subdirectories for remaining source code
-add_subdirectory(src)
+if(MIXMIND_MINIMAL)
+    add_subdirectory(src EXCLUDE_FROM_ALL)
+else()
+    add_subdirectory(src)
+endif()
 
 # Link essential libraries to main executable
 target_link_libraries(MixMindAI PRIVATE
