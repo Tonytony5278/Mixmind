@@ -42,7 +42,7 @@
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-resizable-panels": "^0.0.55",
-    "monaco-editor": "^0.45.0",
+    "monaco-editor": "^0.52.2",
     "@monaco-editor/react": "^4.6.0",
     "react-markdown": "^9.0.1",
     "react-syntax-highlighter": "^15.5.0"
