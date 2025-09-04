@@ -1,12 +1,14 @@
 # Contributing to MixMind AI
 
-Thank you for your interest in contributing to MixMind AI! This document provides guidelines for contributing to this AI-first Digital Audio Workstation.
+Thank you for your interest in contributing to MixMind AI! This document provides guidelines and information for contributors.
 
-## 🎯 Project Overview
+## 🚀 Quick Start
 
-MixMind AI is a professional DAW with AI-first interaction, implementing "Cursor meets Logic Pro" with natural language control and comprehensive music production capabilities.
-
-**Current Status**: Alpha Complete (380K+ lines, 75+ tests)
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feat/amazing-feature`
+3. **Make** your changes with comprehensive tests
+4. **Ensure** all CI checks pass
+5. **Submit** a pull request
 
 ## 🚀 Getting Started
 
