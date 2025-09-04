@@ -1,0 +1,5 @@
+if(EXISTS "C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test/MixMindTests_tests-b12d07c.cmake")
+  include("C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test/MixMindTests_tests-b12d07c.cmake")
+else()
+  add_test(MixMindTests_NOT_BUILT-b12d07c MixMindTests_NOT_BUILT-b12d07c)
+endif()

@@ -1,0 +1,183 @@
+Start testing: Sep 03 20:28 Eastern Summer Time
+----------------------------------------------------------
+1/9 Testing: Basic functionality
+1/9 Test: Basic functionality
+Command: "C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test/Release/MixMindTests.exe" "Basic functionality"
+Directory: C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test
+"Basic functionality" start time: Sep 03 20:28 Eastern Summer Time
+Output:
+----------------------------------------------------------
+Filters: "Basic functionality"
+Randomness seeded to: 3993071387
+===============================================================================
+All tests passed (4 assertions in 1 test case)
+
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"Basic functionality" end time: Sep 03 20:28 Eastern Summer Time
+"Basic functionality" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/9 Testing: Audio concepts
+2/9 Test: Audio concepts
+Command: "C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test/Release/MixMindTests.exe" "Audio concepts"
+Directory: C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test
+"Audio concepts" start time: Sep 03 20:28 Eastern Summer Time
+Output:
+----------------------------------------------------------
+Filters: "Audio concepts"
+Randomness seeded to: 842758054
+===============================================================================
+All tests passed (3 assertions in 1 test case)
+
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"Audio concepts" end time: Sep 03 20:28 Eastern Summer Time
+"Audio concepts" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/9 Testing: Memory management
+3/9 Test: Memory management
+Command: "C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test/Release/MixMindTests.exe" "Memory management"
+Directory: C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test
+"Memory management" start time: Sep 03 20:28 Eastern Summer Time
+Output:
+----------------------------------------------------------
+Filters: "Memory management"
+Randomness seeded to: 4286166694
+===============================================================================
+All tests passed (5 assertions in 1 test case)
+
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"Memory management" end time: Sep 03 20:28 Eastern Summer Time
+"Memory management" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/9 Testing: Rapid Audio Engine
+4/9 Test: Rapid Audio Engine
+Command: "C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test/Release/MixMindTests.exe" "Rapid Audio Engine"
+Directory: C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test
+"Rapid Audio Engine" start time: Sep 03 20:28 Eastern Summer Time
+Output:
+----------------------------------------------------------
+Filters: "Rapid Audio Engine"
+Randomness seeded to: 3166178482
+===============================================================================
+All tests passed (9 assertions in 1 test case)
+
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"Rapid Audio Engine" end time: Sep 03 20:28 Eastern Summer Time
+"Rapid Audio Engine" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/9 Testing: Rapid Natural Language Processing
+5/9 Test: Rapid Natural Language Processing
+Command: "C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test/Release/MixMindTests.exe" "Rapid Natural Language Processing"
+Directory: C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test
+"Rapid Natural Language Processing" start time: Sep 03 20:28 Eastern Summer Time
+Output:
+----------------------------------------------------------
+Filters: "Rapid Natural Language Processing"
+Randomness seeded to: 634859545
+===============================================================================
+All tests passed (21 assertions in 1 test case)
+
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"Rapid Natural Language Processing" end time: Sep 03 20:28 Eastern Summer Time
+"Rapid Natural Language Processing" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/9 Testing: Rapid Track Management
+6/9 Test: Rapid Track Management
+Command: "C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test/Release/MixMindTests.exe" "Rapid Track Management"
+Directory: C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test
+"Rapid Track Management" start time: Sep 03 20:28 Eastern Summer Time
+Output:
+----------------------------------------------------------
+Filters: "Rapid Track Management"
+Randomness seeded to: 663426451
+===============================================================================
+All tests passed (9 assertions in 1 test case)
+
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"Rapid Track Management" end time: Sep 03 20:28 Eastern Summer Time
+"Rapid Track Management" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/9 Testing: Rapid DAW Integration
+7/9 Test: Rapid DAW Integration
+Command: "C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test/Release/MixMindTests.exe" "Rapid DAW Integration"
+Directory: C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test
+"Rapid DAW Integration" start time: Sep 03 20:28 Eastern Summer Time
+Output:
+----------------------------------------------------------
+Filters: "Rapid DAW Integration"
+Randomness seeded to: 2934806996
+===============================================================================
+All tests passed (16 assertions in 1 test case)
+
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"Rapid DAW Integration" end time: Sep 03 20:28 Eastern Summer Time
+"Rapid DAW Integration" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/9 Testing: Rapid Development Performance
+8/9 Test: Rapid Development Performance
+Command: "C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test/Release/MixMindTests.exe" "Rapid Development Performance"
+Directory: C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test
+"Rapid Development Performance" start time: Sep 03 20:28 Eastern Summer Time
+Output:
+----------------------------------------------------------
+Filters: "Rapid Development Performance"
+Randomness seeded to: 75859140
+===============================================================================
+All tests passed (1002 assertions in 1 test case)
+
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"Rapid Development Performance" end time: Sep 03 20:28 Eastern Summer Time
+"Rapid Development Performance" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/9 Testing: Rapid Development Demo Scenario
+9/9 Test: Rapid Development Demo Scenario
+Command: "C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test/Release/MixMindTests.exe" "Rapid Development Demo Scenario"
+Directory: C:/Users/antoi/Desktop/reaper-ai-pilot/build_rapid_test
+"Rapid Development Demo Scenario" start time: Sep 03 20:28 Eastern Summer Time
+Output:
+----------------------------------------------------------
+Filters: "Rapid Development Demo Scenario"
+Randomness seeded to: 1451608710
+===============================================================================
+All tests passed (13 assertions in 1 test case)
+
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"Rapid Development Demo Scenario" end time: Sep 03 20:28 Eastern Summer Time
+"Rapid Development Demo Scenario" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 03 20:28 Eastern Summer Time

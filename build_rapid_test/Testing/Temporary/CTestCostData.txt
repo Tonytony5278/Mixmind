@@ -1,0 +1,10 @@
+Basic functionality 2 0.00453975
+Audio concepts 2 0.004481
+Memory management 2 0.00407395
+Rapid Audio Engine 2 0.0048204
+Rapid Natural Language Processing 1 0.0083844
+Rapid Track Management 2 0.0047009
+Rapid DAW Integration 2 0.0047339
+Rapid Development Performance 2 0.0162915
+Rapid Development Demo Scenario 2 0.00451945
+---

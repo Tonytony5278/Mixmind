@@ -106,6 +106,38 @@ if(NOT MIXMIND_MINIMAL)
     )
     set(HTTPLIB_REQUIRE_OPENSSL OFF)
     FetchContent_MakeAvailable(httplib)
+
+    # Audio file I/O support
+    FetchContent_Declare(
+        libsndfile
+        GIT_REPOSITORY https://github.com/libsndfile/libsndfile.git
+        GIT_TAG 1.2.2
+        SOURCE_DIR ${DEPS_DIR}/libsndfile
+    )
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(BUILD_PROGRAMS OFF CACHE BOOL "" FORCE) 
+    set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(libsndfile)
+
+    # ImGui for rapid GUI development
+    FetchContent_Declare(
+        imgui
+        GIT_REPOSITORY https://github.com/ocornut/imgui.git
+        GIT_TAG v1.90.1
+        SOURCE_DIR ${DEPS_DIR}/imgui
+    )
+    FetchContent_MakeAvailable(imgui)
+
+    # Logging library
+    FetchContent_Declare(
+        spdlog
+        GIT_REPOSITORY https://github.com/gabime/spdlog.git
+        GIT_TAG v1.12.0
+        SOURCE_DIR ${DEPS_DIR}/spdlog
+    )
+    set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(spdlog)
 endif()
 
 # Time stretching libraries
@@ -132,18 +164,55 @@ endif()
 ###########################################
 
 if(BUILD_TESTS)
+    # Catch2 test framework (modern, header-only approach)
     FetchContent_Declare(
-        googletest
-        GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG v1.14.0
-        SOURCE_DIR ${DEPS_DIR}/googletest
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.4.0
+        SOURCE_DIR ${DEPS_DIR}/catch2
     )
-    
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(googletest)
+    FetchContent_MakeAvailable(Catch2)
     
     enable_testing()
-    include(GoogleTest)
+    list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+    include(CTest)
+    include(Catch)
+    
+    # Create comprehensive test executable
+    add_executable(MixMindTests
+        tests/test_basic.cpp
+        tests/test_rapid_development.cpp
+        src/audio/rapid/RapidAudioEngine.cpp
+    )
+    
+    target_link_libraries(MixMindTests PRIVATE
+        Catch2::Catch2WithMain
+    )
+    
+    # Rapid Development Demo executable
+    add_executable(MixMindRapidDemo
+        src/main_rapid_demo.cpp
+        src/audio/rapid/RapidAudioEngine.cpp
+    )
+    
+    target_include_directories(MixMindRapidDemo PRIVATE src)
+    
+    # Optional: Link with additional libraries when not minimal
+    if(NOT MIXMIND_MINIMAL)
+        target_link_libraries(MixMindRapidDemo PRIVATE
+            spdlog::spdlog
+        )
+    endif()
+    
+    # Register tests with CTest
+    catch_discover_tests(MixMindTests)
+    
+    # Test target for easy execution
+    add_custom_target(run_tests
+        COMMAND ${CMAKE_CTEST_COMMAND} --verbose
+        DEPENDS MixMindTests
+        COMMENT "Running all tests with CTest"
+    )
 endif()
 
 ###########################################
