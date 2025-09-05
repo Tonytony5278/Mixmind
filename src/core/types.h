@@ -149,6 +149,41 @@ public:
         std::fill(data_.begin(), data_.end(), T{0});
     }
     
+    // Sample access methods for audio generators
+    void setSample(int32_t sampleIndex, int32_t channel, T value) {
+        if (channel >= 0 && channel < channels_ && sampleIndex >= 0 && sampleIndex < samples_) {
+            data_[sampleIndex * channels_ + channel] = value;
+        }
+    }
+    
+    T getSample(int32_t sampleIndex, int32_t channel) const {
+        if (channel >= 0 && channel < channels_ && sampleIndex >= 0 && sampleIndex < samples_) {
+            return data_[sampleIndex * channels_ + channel];
+        }
+        return T{0};
+    }
+    
+    void addSample(int32_t sampleIndex, int32_t channel, T value) {
+        if (channel >= 0 && channel < channels_ && sampleIndex >= 0 && sampleIndex < samples_) {
+            data_[sampleIndex * channels_ + channel] += value;
+        }
+    }
+    
+    // Resize method that the generators expect
+    void resize(size_t totalSamples) {
+        if (channels_ > 0) {
+            samples_ = static_cast<int32_t>(totalSamples / channels_);
+            data_.resize(totalSamples);
+        }
+    }
+    
+    // Get raw data pointer
+    T* getData() { return data_.data(); }
+    const T* getData() const { return data_.data(); }
+    
+    // Get total size
+    size_t size() const { return data_.size(); }
+    
 private:
     std::vector<T> data_;
     int32_t channels_ = 0;

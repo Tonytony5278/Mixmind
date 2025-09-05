@@ -1,9 +1,11 @@
 #include "LibEBU128Service.h"
+#include <ebur128.h>  // Main libebur128 header
+#include <cmath>
+#include <stdexcept>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <chrono>
-#include <cmath>
 
 namespace mixmind::services {
 
@@ -32,18 +34,18 @@ LibEBU128Service::~LibEBU128Service() {
 
 core::AsyncResult<core::VoidResult> LibEBU128Service::initialize() {
     return core::AsyncResult<core::VoidResult>::createResolved(
-        core::VoidResult::fromLambda([this]() -> core::VoidResult {
+        core::core::Result<void>::fromLambda([this]() -> core::VoidResult {
             std::lock_guard<std::mutex> lock(ebuStateMutex_);
             
             if (isInitialized_.load()) {
-                return core::VoidResult::success();
+                return core::core::Result<void>::success();
             }
             
             try {
                 // Validate libebur128 is available
                 int version = ebur128_get_version();
                 if (version < EBUR128_VERSION_INT(1, 2, 0)) {
-                    return core::VoidResult::error(
+                    return core::core::Result<void>::error(
                         core::ErrorCode::UnsupportedVersion,
                         "libebur128 version too old, require >= 1.2.0"
                     );
@@ -64,11 +66,11 @@ core::AsyncResult<core::VoidResult> LibEBU128Service::initialize() {
                 cleanupEBUState();
                 
                 isInitialized_ = true;
-                return core::VoidResult::success();
+                return core::core::Result<void>::success();
                 
             } catch (const std::exception& e) {
                 lastError_ = "Failed to initialize libebur128: " + std::string(e.what());
-                return core::VoidResult::error(
+                return core::core::Result<void>::error(
                     core::ErrorCode::InitializationFailed,
                     lastError_
                 );
@@ -79,11 +81,11 @@ core::AsyncResult<core::VoidResult> LibEBU128Service::initialize() {
 
 core::AsyncResult<core::VoidResult> LibEBU128Service::shutdown() {
     return core::AsyncResult<core::VoidResult>::createResolved(
-        core::VoidResult::fromLambda([this]() -> core::VoidResult {
+        core::core::Result<void>::fromLambda([this]() -> core::VoidResult {
             std::lock_guard<std::mutex> lock(ebuStateMutex_);
             
             if (!isInitialized_.load()) {
-                return core::VoidResult::success();
+                return core::core::Result<void>::success();
             }
             
             try {
@@ -107,11 +109,11 @@ core::AsyncResult<core::VoidResult> LibEBU128Service::shutdown() {
                 resetPerformanceMetrics();
                 
                 isInitialized_ = false;
-                return core::VoidResult::success();
+                return core::core::Result<void>::success();
                 
             } catch (const std::exception& e) {
                 lastError_ = "Failed to shutdown libebur128: " + std::string(e.what());
-                return core::VoidResult::error(
+                return core::core::Result<void>::error(
                     core::ErrorCode::ShutdownFailed,
                     lastError_
                 );
@@ -183,7 +185,7 @@ core::VoidResult LibEBU128Service::resetConfiguration() {
     config_["gating_enabled"] = "true";
     config_["max_analysis_duration"] = "3600";
     
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 bool LibEBU128Service::isHealthy() const {
@@ -206,14 +208,14 @@ core::AsyncResult<core::VoidResult> LibEBU128Service::analyzeBuffer(
 ) {
     return core::AsyncResult<core::VoidResult>::createAsync([this, buffer, sampleRate, progress]() -> core::VoidResult {
         if (!isInitialized()) {
-            return core::VoidResult::error(
+            return core::core::Result<void>::error(
                 core::ErrorCode::InvalidState,
                 "Service not initialized"
             );
         }
         
         if (buffer.channels.empty()) {
-            return core::VoidResult::error(
+            return core::core::Result<void>::error(
                 core::ErrorCode::InvalidParameter,
                 "Empty audio buffer"
             );
@@ -243,7 +245,7 @@ core::AsyncResult<core::VoidResult> LibEBU128Service::analyzeBuffer(
                 if (shouldCancel_.load()) {
                     cleanupEBUState();
                     isAnalyzing_ = false;
-                    return core::VoidResult::error(
+                    return core::core::Result<void>::error(
                         core::ErrorCode::OperationCancelled,
                         "Analysis cancelled"
                     );
@@ -271,7 +273,7 @@ core::AsyncResult<core::VoidResult> LibEBU128Service::analyzeBuffer(
             if (ebuResult != EBUR128_SUCCESS) {
                 cleanupEBUState();
                 isAnalyzing_ = false;
-                return core::VoidResult::error(
+                return core::core::Result<void>::error(
                     convertEBUError(ebuResult),
                     "Failed to add frames to libebur128"
                 );
@@ -295,7 +297,7 @@ core::AsyncResult<core::VoidResult> LibEBU128Service::analyzeBuffer(
             std::string error = "Buffer analysis failed: " + std::string(e.what());
             lastError_ = error;
             
-            return core::VoidResult::error(
+            return core::core::Result<void>::error(
                 core::ErrorCode::ProcessingFailed,
                 error
             );
@@ -326,7 +328,7 @@ bool LibEBU128Service::isAnalyzing() const {
 
 core::VoidResult LibEBU128Service::cancelAnalysis() {
     shouldCancel_ = true;
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 // ========================================================================
@@ -425,7 +427,7 @@ core::VoidResult LibEBU128Service::initializeEBUState(core::SampleRate sampleRat
     );
     
     if (!ebuState_) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::InitializationFailed,
             "Failed to initialize libebur128 state"
         );
@@ -434,7 +436,7 @@ core::VoidResult LibEBU128Service::initializeEBUState(core::SampleRate sampleRat
     currentSampleRate_ = sampleRate;
     currentChannels_ = channels;
     
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 void LibEBU128Service::cleanupEBUState() {
@@ -446,7 +448,7 @@ void LibEBU128Service::cleanupEBUState() {
 
 core::VoidResult LibEBU128Service::computeAllMeasurements() {
     if (!ebuState_) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::InvalidState,
             "No EBU state available"
         );
@@ -486,10 +488,10 @@ core::VoidResult LibEBU128Service::computeAllMeasurements() {
             }
         }
         
-        return core::VoidResult::success();
+        return core::core::Result<void>::success();
         
     } catch (const std::exception& e) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::ProcessingFailed,
             "Failed to compute measurements: " + std::string(e.what())
         );
@@ -548,7 +550,7 @@ core::VoidResult LibEBU128Service::validateConfiguration() const {
         // Validate sample rate
         int sampleRate = std::stoi(config_.at("sample_rate"));
         if (sampleRate < 8000 || sampleRate > 192000) {
-            return core::VoidResult::error(
+            return core::core::Result<void>::error(
                 core::ErrorCode::InvalidParameter,
                 "Invalid sample rate: " + std::to_string(sampleRate)
             );
@@ -557,16 +559,16 @@ core::VoidResult LibEBU128Service::validateConfiguration() const {
         // Validate channels
         int channels = std::stoi(config_.at("channels"));
         if (channels < 1 || channels > 32) {
-            return core::VoidResult::error(
+            return core::core::Result<void>::error(
                 core::ErrorCode::InvalidParameter,
                 "Invalid channel count: " + std::to_string(channels)
             );
         }
         
-        return core::VoidResult::success();
+        return core::core::Result<void>::success();
         
     } catch (const std::exception& e) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::InvalidParameter,
             "Configuration validation failed: " + std::string(e.what())
         );
@@ -576,7 +578,7 @@ core::VoidResult LibEBU128Service::validateConfiguration() const {
 // Placeholder for file analysis implementation
 core::AsyncResult<core::VoidResult> LibEBU128Service::loadAndAnalyzeAudioFile(const std::string& filePath, core::ProgressCallback progress) {
     return core::AsyncResult<core::VoidResult>::createResolved(
-        core::VoidResult::error(
+        core::core::Result<void>::error(
             core::ErrorCode::NotImplemented,
             "File analysis not yet implemented - requires audio file loading"
         )

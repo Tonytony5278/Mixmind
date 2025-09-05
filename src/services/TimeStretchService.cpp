@@ -1,4 +1,6 @@
 #include "TimeStretchService.h"
+#include <SoundTouch.h>          // Main SoundTouch header
+#include <STTypes.h>             // SoundTouch types
 #include "../core/async.h"
 #include <algorithm>
 #include <cmath>
@@ -6,6 +8,8 @@
 #include <fstream>
 #include <random>
 #include <sstream>
+
+using namespace soundtouch;
 
 namespace mixmind::services {
 
@@ -32,7 +36,7 @@ core::AsyncResult<core::VoidResult> TimeStretchService::initialize() {
         std::lock_guard<std::mutex> lock(processorMutex_);
         
         if (isInitialized_.load()) {
-            return core::VoidResult::success();
+            return core::core::Result<void>::success();
         }
         
         // Initialize SoundTouch (always available)
@@ -54,7 +58,7 @@ core::AsyncResult<core::VoidResult> TimeStretchService::initialize() {
         
         isInitialized_.store(true);
         
-        return core::VoidResult::success();
+        return core::core::Result<void>::success();
     }, "Initializing TimeStretchService");
 }
 
@@ -63,7 +67,7 @@ core::AsyncResult<core::VoidResult> TimeStretchService::shutdown() {
         std::lock_guard<std::mutex> lock(processorMutex_);
         
         if (!isInitialized_.load()) {
-            return core::VoidResult::success();
+            return core::core::Result<void>::success();
         }
         
         // Stop streaming if active
@@ -76,7 +80,7 @@ core::AsyncResult<core::VoidResult> TimeStretchService::shutdown() {
         
         isInitialized_.store(false);
         
-        return core::VoidResult::success();
+        return core::core::Result<void>::success();
     }, "Shutting down TimeStretchService");
 }
 
@@ -166,7 +170,7 @@ core::VoidResult TimeStretchService::configure(const std::unordered_map<std::str
         }
     }
     
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 std::optional<std::string> TimeStretchService::getConfigValue(const std::string& key) const {
@@ -193,7 +197,7 @@ core::VoidResult TimeStretchService::resetConfiguration() {
     setFormantPreservationEnabled(false);
     resetTimeAndPitch();
     
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 bool TimeStretchService::isHealthy() const {
@@ -213,7 +217,7 @@ core::AsyncResult<core::VoidResult> TimeStretchService::runSelfTest() {
         // Test basic initialization
         if (!isInitialized_.load()) {
             lastError_ = "Service not initialized";
-            return core::VoidResult::error(
+            return core::core::Result<void>::error(
                 core::ErrorCode::AudioDeviceError,
                 core::ErrorCategory::audio(),
                 "TimeStretchService not initialized"
@@ -277,7 +281,7 @@ core::AsyncResult<core::VoidResult> TimeStretchService::runSelfTest() {
         setStretchEngine(StretchEngine::SoundTouch);
         
         lastError_.clear();
-        return core::VoidResult::success();
+        return core::core::Result<void>::success();
         
     }, "Running TimeStretchService self-test");
 }
@@ -321,7 +325,7 @@ core::VoidResult TimeStretchService::processBuffer(
     core::SampleRate sampleRate) {
     
     if (!isInitialized_.load()) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::AudioDeviceError,
             core::ErrorCategory::audio(),
             "TimeStretchService not initialized"
@@ -329,7 +333,7 @@ core::VoidResult TimeStretchService::processBuffer(
     }
     
     if (inputBuffer.empty() || inputBuffer[0].empty()) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::InvalidParameter,
             core::ErrorCategory::audio(),
             "Empty input buffer"
@@ -403,7 +407,7 @@ core::VoidResult TimeStretchService::setParameters(const std::unordered_map<std:
         }
     }
     
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 std::unordered_map<std::string, double> TimeStretchService::getParameters() const {
@@ -432,7 +436,7 @@ core::VoidResult TimeStretchService::resetState() {
         rubberBand_->reset();
     }
     
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 int32_t TimeStretchService::getLatencySamples() const {
@@ -463,7 +467,7 @@ core::VoidResult TimeStretchService::setStretchEngine(StretchEngine engine) {
         if (!result) {
             // Fall back to SoundTouch
             currentEngine_ = StretchEngine::SoundTouch;
-            return core::VoidResult::error(
+            return core::core::Result<void>::error(
                 core::ErrorCode::NotSupported,
                 core::ErrorCategory::audio(),
                 "RubberBand not available, falling back to SoundTouch"
@@ -472,7 +476,7 @@ core::VoidResult TimeStretchService::setStretchEngine(StretchEngine engine) {
     }
     
     currentEngine_ = engine;
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 TimeStretchService::StretchEngine TimeStretchService::getStretchEngine() const {
@@ -495,7 +499,7 @@ std::vector<TimeStretchService::StretchEngine> TimeStretchService::getAvailableE
 
 core::VoidResult TimeStretchService::setTimeRatio(double ratio) {
     if (ratio <= 0.0 || ratio > 10.0) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::InvalidParameter,
             core::ErrorCategory::audio(),
             "Time ratio out of valid range (0.0, 10.0]"
@@ -515,7 +519,7 @@ core::VoidResult TimeStretchService::setTimeRatio(double ratio) {
         rubberBand_->setTimeRatio(ratio);
     }
     
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 double TimeStretchService::getTimeRatio() const {
@@ -524,7 +528,7 @@ double TimeStretchService::getTimeRatio() const {
 
 core::VoidResult TimeStretchService::setPitchShift(double semitones) {
     if (std::abs(semitones) > 48.0) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::InvalidParameter,
             core::ErrorCategory::audio(),
             "Pitch shift out of valid range [-48, +48] semitones"
@@ -541,7 +545,7 @@ double TimeStretchService::getPitchShift() const {
 
 core::VoidResult TimeStretchService::setPitchRatio(double ratio) {
     if (ratio <= 0.0 || ratio > 16.0) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::InvalidParameter,
             core::ErrorCategory::audio(),
             "Pitch ratio out of valid range (0.0, 16.0]"
@@ -561,7 +565,7 @@ core::VoidResult TimeStretchService::setPitchRatio(double ratio) {
         rubberBand_->setPitchScale(ratio);
     }
     
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 double TimeStretchService::getPitchRatio() const {
@@ -579,7 +583,7 @@ core::VoidResult TimeStretchService::setTimeAndPitchRatios(double timeRatio, dou
         return pitchResult;
     }
     
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 core::VoidResult TimeStretchService::resetTimeAndPitch() {
@@ -612,10 +616,10 @@ core::VoidResult TimeStretchService::initializeSoundTouch() {
             soundTouch_->setSetting(SETTING_OVERLAP_MS, soundTouchSettings_.overlapMs);
         }
         
-        return core::VoidResult::success();
+        return core::core::Result<void>::success();
         
     } catch (const std::exception& e) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::AudioDeviceError,
             core::ErrorCategory::audio(),
             std::string("Failed to initialize SoundTouch: ") + e.what()
@@ -638,17 +642,17 @@ core::VoidResult TimeStretchService::initializeRubberBand(core::SampleRate sampl
             rubberBand_->setDebugLevel(rubberBandSettings_.debugLevel);
         }
         
-        return core::VoidResult::success();
+        return core::core::Result<void>::success();
         
     } catch (const std::exception& e) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::AudioDeviceError,
             core::ErrorCategory::audio(),
             std::string("Failed to initialize RubberBand: ") + e.what()
         );
     }
 #else
-    return core::VoidResult::error(
+    return core::core::Result<void>::error(
         core::ErrorCode::NotSupported,
         core::ErrorCategory::audio(),
         "RubberBand not available in this build"
@@ -669,7 +673,7 @@ core::VoidResult TimeStretchService::processSoundTouch(
     core::FloatAudioBuffer& outputBuffer) {
     
     if (!soundTouch_) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::AudioDeviceError,
             core::ErrorCategory::audio(),
             "SoundTouch processor not available"
@@ -726,10 +730,10 @@ core::VoidResult TimeStretchService::processSoundTouch(
             }
         }
         
-        return core::VoidResult::success();
+        return core::core::Result<void>::success();
         
     } catch (const std::exception& e) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::AudioDeviceError,
             core::ErrorCategory::audio(),
             std::string("SoundTouch processing error: ") + e.what()
@@ -743,7 +747,7 @@ core::VoidResult TimeStretchService::processRubberBand(
     
 #ifdef RUBBERBAND_ENABLED
     if (!rubberBand_) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::AudioDeviceError,
             core::ErrorCategory::audio(),
             "RubberBand processor not available"
@@ -795,17 +799,17 @@ core::VoidResult TimeStretchService::processRubberBand(
             }
         }
         
-        return core::VoidResult::success();
+        return core::core::Result<void>::success();
         
     } catch (const std::exception& e) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::AudioDeviceError,
             core::ErrorCategory::audio(),
             std::string("RubberBand processing error: ") + e.what()
         );
     }
 #else
-    return core::VoidResult::error(
+    return core::core::Result<void>::error(
         core::ErrorCode::NotSupported,
         core::ErrorCategory::audio(),
         "RubberBand not available in this build"
@@ -840,14 +844,14 @@ core::VoidResult TimeStretchService::validateParameters() const {
     double pitchRatio = pitchRatio_.load();
     
     if (!areParametersValid(timeRatio, pitchRatio)) {
-        return core::VoidResult::error(
+        return core::core::Result<void>::error(
             core::ErrorCode::InvalidParameter,
             core::ErrorCategory::audio(),
             "Invalid time stretch parameters"
         );
     }
     
-    return core::VoidResult::success();
+    return core::core::Result<void>::success();
 }
 
 void TimeStretchService::initializeBuiltInPresets() {

@@ -63,7 +63,7 @@ git clone https://github.com/Tonytony5278/Mixmind.git
 cd Mixmind
 
 # Build with CMake
-cmake -S . -B build -G "Visual Studio 16 2019"
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 
 # Run comprehensive tests

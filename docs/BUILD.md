@@ -1,289 +1,112 @@
-# Building MixMind AI
+# MixMind AI Build Guide
 
-This guide provides exact commands for building MixMind AI on all supported platforms.
+## Overview
 
-## Prerequisites
+MixMind AI supports two build configurations:
 
-### All Platforms
-- **CMake**: 3.22 or later
-- **Git**: With submodule support
-- **C++20 Compiler**: See platform-specific requirements below
+1. **Minimal Build** (`MIXMIND_MINIMAL=ON`) - Lightweight, CI-friendly
+2. **Full Build** (`MIXMIND_MINIMAL=OFF`) - Complete DAW with audio dependencies
 
-### Windows
-- **Visual Studio 2022** (Build Tools or Community Edition)
-  - Workloads: "C++ build tools" with Windows 10/11 SDK
-- **Alternative**: Visual Studio 2019 (minimum 16.11)
+## Build Flags Audit
 
-### macOS
-- **Xcode 15** or later (for clang with C++20 support)
-- **macOS**: 11.0 (Big Sur) or later
-- **Apple Silicon**: Native builds supported
+### Core Options (CMakeLists.txt:41-43)
+```cmake
+option(RUBBERBAND_ENABLED "Enable Rubber Band time stretching (commercial)" OFF)
+option(BUILD_TESTS "Build unit tests" ON)
+option(MIXMIND_MINIMAL "Build minimal, CI-friendly targets (no heavy audio deps)" OFF)
+```
 
-### Linux
-- **Ubuntu 24.04** / **Fedora 39** / **Debian 12** (or equivalent)
-- **GCC 14** or **Clang 18** (for complete C++20 support)
-- **System packages**: See platform sections below
+### MIXMIND_MINIMAL Impact
+
+#### Dependencies Skipped (Minimal Build)
+- **Lines 57-87**: Tracktion Engine + JUCE (heavy ~500MB download)
+- **Lines 90-109**: nlohmann_json, httplib 
+- **Lines 240-271**: All audio library linking
+
+#### Conditional Builds
+| Component | Minimal | Full | File Reference |
+|-----------|---------|------|----------------|
+| Tracktion/JUCE | ❌ | ✅ | CMakeLists.txt:57-87 |
+| JSON/HTTP libs | ❌ | ✅ | CMakeLists.txt:90-109 |
+| MixMind App | ❌ | ✅ | apps/mixmind_app/CMakeLists.txt:4 |
+| Audio Services | ❌ | ✅ | src/services/CMakeLists.txt:2 |
+| VST/Tracktion Adapters | ❌ | ✅ | src/adapters/CMakeLists.txt:2 |
+| AI Services | ❌ | ✅ | src/ai/CMakeLists.txt:36 |
 
 ## Quick Start
 
-### Windows (Visual Studio)
-
-```powershell
-# Clone repository
-git clone --recursive https://github.com/Tonytony5278/Mixmind.git
-cd Mixmind
-
-# Configure
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
-
-# Build  
-cmake --build build --config Release --parallel 4
-
-# Test
-cd build
-ctest -C Release --output-on-failure
-
-# Run
-./Release/mixmind.exe
-```
-
-### macOS (Xcode)
-
+### Minimal Build (CI/Testing)
 ```bash
-# Clone repository
-git clone --recursive https://github.com/Tonytony5278/Mixmind.git
-cd Mixmind
-
-# Configure
-cmake -S . -B build -G "Xcode" \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-
-# Build
-cmake --build build --config Release -- -parallelizeTargets -jobs 4
-
-# Test
-cd build
-ctest -C Release --output-on-failure
-
-# Run
-open Release/MixMind.app
+cmake -S . -B build -DMIXMIND_MINIMAL=ON
+cmake --build build --config Release
+./build/Release/MixMindAI.exe  # Stub executable
 ```
 
-### Linux (Ninja)
+**Use Cases:**
+- Continuous Integration (all workflows use this)
+- Quick syntax/structure validation  
+- Unit testing without audio dependencies
 
+### Full Build (Development)
 ```bash
-# Install dependencies (Ubuntu 24.04)
-sudo apt-get update
-sudo apt-get install -y \
-  build-essential ninja-build \
-  gcc-14 g++-14 \
-  libasound2-dev libjack-jackd2-dev \
-  libgl1-mesa-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev
-
-# Clone repository
-git clone --recursive https://github.com/Tonytony5278/Mixmind.git
-cd Mixmind
-
-# Configure
-export CC=gcc-14 CXX=g++-14
-cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
-
-# Build
-cmake --build build --parallel 4
-
-# Test
-cd build
-ctest --output-on-failure --parallel 4
-
-# Run
-./mixmind
+cmake -S . -B build -DMIXMIND_MINIMAL=OFF
+cmake --build build --config Release
+./build/Release/mixmind_app.exe  # Complete DAW application
 ```
 
-## Build Options
+**Features Enabled:**
+- Complete JUCE audio application
+- Tracktion Engine integration
+- Transport controls (Play/Stop/Loop/Record)
+- VST3 plugin hosting
+- Real-time audio processing
+- Session save/load
 
-### Common CMake Options
+## Build Verification
 
+### Minimal Build Success
 ```bash
-# Build type
--DCMAKE_BUILD_TYPE=Release          # Optimized build (recommended)
--DCMAKE_BUILD_TYPE=Debug            # Debug symbols, slower
--DCMAKE_BUILD_TYPE=RelWithDebInfo   # Optimized + debug symbols
-
-# Dependency options
--DTRACKTION_BUILD_EXAMPLES=OFF      # Skip Tracktion examples (recommended)
--DTRACKTION_BUILD_TESTS=OFF         # Skip Tracktion tests (recommended)
--DRUBBERBAND_ENABLED=ON             # Enable time-stretching (requires license)
-
-# Install prefix
--DCMAKE_INSTALL_PREFIX=/usr/local   # Installation directory
+# Should build in ~30 seconds
+cmake -S . -B build_minimal -DMIXMIND_MINIMAL=ON
+cmake --build build_minimal --config Release
+./build_minimal/Release/MixMindAI.exe
 ```
 
-### Platform-Specific Options
-
-**Windows:**
-```powershell
--G "Visual Studio 17 2022" -A x64   # Use VS 2022, 64-bit
--DCPACK_GENERATOR=NSIS              # Enable NSIS installer packaging
+Expected output:
+```
+MixMind AI - Minimal Build
+Build: MIXMIND_MINIMAL=ON
+Core systems initialized
+Exiting...
 ```
 
-**macOS:**
+### Full Build Success  
 ```bash
--G "Xcode"                          # Use Xcode generator
--DCMAKE_OSX_DEPLOYMENT_TARGET=11.0  # Minimum macOS version
--DCPACK_GENERATOR=DragNDrop         # Enable DMG packaging
+# First build takes 5-10 minutes (downloads Tracktion)
+cmake -S . -B build_full -DMIXMIND_MINIMAL=OFF
+cmake --build build_full --config Release
+./build_full/Release/mixmind_app.exe
 ```
 
-**Linux:**
-```bash
--G "Ninja"                          # Fast ninja builds
--DCPACK_GENERATOR="TGZ;DEB;RPM"     # Multiple package formats
-```
+Expected: JUCE window opens with transport controls
 
 ## Troubleshooting
 
-### Common Issues
+### Full Build Issues
+- **Long configure time**: Tracktion download is ~500MB
+- **Build failures**: Ensure Visual Studio 2019+ on Windows
+- **Missing audio devices**: Check JUCE device manager settings
 
-**"CMake version too old"**
-```bash
-# Ubuntu/Debian
-wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc | sudo apt-key add -
-sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main'
-sudo apt update && sudo apt install cmake
+### Minimal Build Issues
+- **Missing main_minimal.cpp**: Should exist at `src/main_minimal.cpp`
+- **Test failures**: Run with `ctest --output-on-failure`
 
-# macOS
-brew install cmake
+## CI Integration
 
-# Windows
-# Download from https://cmake.org/download/
-```
+All GitHub Actions workflows use `MIXMIND_MINIMAL=ON`:
+- **ci-windows.yml**: Windows build verification
+- **ci-matrix.yml**: Cross-platform testing  
+- **codeql-analysis.yml**: Security analysis
+- **quality-gate.yml**: Coverage and metrics
 
-**"C++20 features not supported"**
-- Windows: Update to Visual Studio 2022
-- macOS: Update to Xcode 15+
-- Linux: Use GCC 14+ or Clang 18+
-
-**"Submodule errors"**
-```bash
-git submodule update --init --recursive
-# Or clone with: git clone --recursive
-```
-
-**"VST3 SDK not found"**
-```bash
-# The VST3 SDK should be fetched automatically
-# If issues persist, manually clone:
-git clone https://github.com/steinbergmedia/vst3sdk.git external/vst3sdk
-```
-
-### Audio Driver Issues
-
-**Windows (ASIO)**
-- Install ASIO4ALL for universal ASIO support
-- Or use audio interface manufacturer's ASIO driver
-
-**macOS (Core Audio)**  
-- Core Audio is built-in, no additional drivers needed
-- Check Audio MIDI Setup for proper device configuration
-
-**Linux (ALSA/JACK)**
-```bash
-# ALSA (recommended for basic use)
-sudo apt-get install alsa-utils
-
-# JACK (recommended for professional use)  
-sudo apt-get install jackd2 qjackctl
-```
-
-## Development Build
-
-For development with faster incremental builds:
-
-```bash
-# Configure with debug info and faster builds
-cmake -S . -B build -G "Ninja" \
-  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-  -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-  -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-
-# Install ccache for faster rebuilds
-# Ubuntu: sudo apt install ccache
-# macOS: brew install ccache  
-# Windows: Use sccache instead
-```
-
-## Testing
-
-### Run All Tests
-```bash
-cd build
-ctest --output-on-failure --parallel 4
-```
-
-### Run Specific Test Categories
-```bash
-# Core system tests
-ctest -R "core" --output-on-failure
-
-# Audio processing tests  
-ctest -R "audio|vsti|mixer" --output-on-failure
-
-# AI system tests
-ctest -R "ai" --output-on-failure
-```
-
-### Performance Tests
-```bash
-# Run with timing information
-ctest --output-on-failure --verbose
-
-# Run performance benchmarks
-./build/Release/test_performance
-```
-
-## Installation
-
-### System Installation
-```bash
-# Install to system directories
-cmake --install build --config Release
-
-# Create packages
-cd build
-cpack -C Release
-```
-
-### Portable Installation
-```bash
-# Copy binaries to portable directory
-mkdir MixMind-Portable
-cp build/Release/mixmind* MixMind-Portable/
-cp -r assets/ MixMind-Portable/
-```
-
-## Validation
-
-After building, validate your installation:
-
-```bash
-# Run the validation script
-python setup/validation/Validate_Alpha_Setup.py
-
-# Or use the professional installer
-./MixMind_Professional_Installer.bat  # Windows
-./MixMind_Professional_Installer.sh   # Linux/macOS (if available)
-```
-
-## CI/CD Builds
-
-The project includes comprehensive CI/CD that builds on:
-- **Windows**: Visual Studio 2022 (MSVC)
-- **macOS**: Xcode 15 (Clang)  
-- **Linux**: GCC 14 and Clang 18
-
-See `.github/workflows/ci-matrix.yml` for the exact CI configuration.
-
----
-
-**Need Help?** Open an issue at https://github.com/Tonytony5278/Mixmind/issues
+This keeps CI fast (~2-3 minutes) while preserving full functionality for local development.

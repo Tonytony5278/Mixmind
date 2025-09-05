@@ -29,11 +29,18 @@
 #include "services/OSCService.h"
 #include "services/TimeStretchService.h"
 #include "services/ONNXService.h"
+#include "services/SpeechRecognitionService.h"
+
+// AI Intelligence
+#include "ai/ProactiveMonitor.h"
 
 // AI Action API
 #include "api/ActionAPI.h"
 #include "api/RESTServer.h"
 #include "api/WebSocketServer.h"
+
+// UI Components
+#include "ui/AIChatWidget.h"
 
 #include <memory>
 #include <string>
@@ -112,6 +119,13 @@ public:
     std::shared_ptr<services::OSCService> getOSCService() const;
     std::shared_ptr<services::TimeStretchService> getTimeStretchService() const;
     std::shared_ptr<services::ONNXService> getONNXService() const;
+    std::shared_ptr<SpeechRecognitionService> getSpeechRecognitionService() const;
+    
+    /// Get Proactive AI Monitor
+    std::shared_ptr<mixmind::ai::ProactiveAIMonitor> getProactiveMonitor() const;
+    
+    /// Get AI UI Components
+    std::shared_ptr<AIChatWidget> getAIChatWidget() const;
     
     /// Get AI Action API
     std::shared_ptr<api::ActionAPI> getActionAPI() const;
@@ -353,11 +367,18 @@ private:
     std::shared_ptr<services::OSCService> oscService_;
     std::shared_ptr<services::TimeStretchService> timeStretchService_;
     std::shared_ptr<services::ONNXService> onnxService_;
+    std::shared_ptr<SpeechRecognitionService> speechService_;
+    
+    // AI Intelligence components
+    std::shared_ptr<mixmind::ai::ProactiveAIMonitor> proactive_monitor_;
     
     // AI Action API
     std::shared_ptr<api::ActionAPI> actionAPI_;
     std::shared_ptr<api::RESTServer> restServer_;
     std::shared_ptr<api::WebSocketServer> wsServer_;
+    
+    // AI UI components
+    std::unique_ptr<AIChatWidget> ai_chat_widget_;
     
     // Configuration
     AppConfig config_;

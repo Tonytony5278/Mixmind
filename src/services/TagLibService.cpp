@@ -1,9 +1,14 @@
 #include "TagLibService.h"
+#include "../core/async.h"
 #include <taglib/fileref.h>
+#include <taglib/tag.h>
 #include <taglib/tpropertymap.h>
+#include <taglib/audioproperties.h>
 #include <filesystem>
 #include <algorithm>
 #include <chrono>
+
+using namespace TagLib;
 
 namespace mixmind::services {
 
@@ -19,7 +24,7 @@ TagLibService::~TagLibService() = default;
 // ========================================================================
 
 core::AsyncResult<core::VoidResult> TagLibService::initialize() {
-    return executeAsync<core::VoidResult>([this]() -> core::VoidResult {
+    return core::executeAsyncGlobal<core::Result<void>>([this]() -> core::Result<void> {
         try {
             // Initialize TagLib (no explicit initialization needed)
             
@@ -31,20 +36,20 @@ core::AsyncResult<core::VoidResult> TagLibService::initialize() {
             }
             
             isInitialized_.store(true);
-            return core::VoidResult::success();
+            return core::core::Result<void>::success();
             
         } catch (const std::exception& e) {
             std::lock_guard<std::mutex> lock(errorMutex_);
             lastError_ = "Initialization failed: " + std::string(e.what());
-            return core::VoidResult::failure(lastError_);
+            return core::core::Result<void>::failure(lastError_);
         }
     });
 }
 
 core::AsyncResult<core::VoidResult> TagLibService::shutdown() {
-    return executeAsync<core::VoidResult>([this]() -> core::VoidResult {
+    return core::executeAsyncGlobal<core::Result<void>>([this]() -> core::Result<void> {
         isInitialized_.store(false);
-        return core::VoidResult::success();
+        return core::core::Result<void>::success();
     });
 }
 
@@ -65,7 +70,7 @@ std::string TagLibService::getServiceVersion() const {
 // ========================================================================
 
 core::AsyncResult<core::Result<IMetadataService::AudioMetadata>> TagLibService::readMetadata(const std::string& filePath) {
-    return executeAsync<core::Result<AudioMetadata>>([this, filePath]() -> core::Result<AudioMetadata> {
+    return core::executeAsyncGlobal<core::Result<AudioMetadata>>([this, filePath]() -> core::Result<AudioMetadata> {
         try {
             if (!isInitialized()) {
                 return core::Result<AudioMetadata>::failure("Service not initialized");
@@ -113,15 +118,15 @@ core::AsyncResult<core::Result<IMetadataService::AudioMetadata>> TagLibService::
 }
 
 core::AsyncResult<core::VoidResult> TagLibService::writeMetadata(const std::string& filePath, const AudioMetadata& metadata) {
-    return executeAsync<core::VoidResult>([this, filePath, metadata]() -> core::VoidResult {
+    return core::executeAsyncGlobal<core::Result<void>>([this, filePath, metadata]() -> core::Result<void> {
         try {
             if (!isInitialized()) {
-                return core::VoidResult::failure("Service not initialized");
+                return core::core::Result<void>::failure("Service not initialized");
             }
             
             TagLib::FileRef file(filePath.c_str());
             if (file.isNull()) {
-                return core::VoidResult::failure("Could not open file for writing: " + filePath);
+                return core::core::Result<void>::failure("Could not open file for writing: " + filePath);
             }
             
             if (auto* tag = file.tag()) {
@@ -136,13 +141,13 @@ core::AsyncResult<core::VoidResult> TagLibService::writeMetadata(const std::stri
             
             bool saved = file.save();
             if (!saved) {
-                return core::VoidResult::failure("Failed to save metadata to file: " + filePath);
+                return core::core::Result<void>::failure("Failed to save metadata to file: " + filePath);
             }
             
-            return core::VoidResult::success();
+            return core::core::Result<void>::success();
             
         } catch (const std::exception& e) {
-            return core::VoidResult::failure("Write metadata failed: " + std::string(e.what()));
+            return core::core::Result<void>::failure("Write metadata failed: " + std::string(e.what()));
         }
     });
 }

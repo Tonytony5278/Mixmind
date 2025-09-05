@@ -29,18 +29,24 @@ add_library(mixmind_te_adapter STATIC
 target_link_libraries(mixmind_te_adapter PUBLIC
     mixmind_core
     tracktion_engine
-    juce::juce_audio_basics
-    juce::juce_audio_devices
-    juce::juce_audio_formats
-    juce::juce_audio_processors
-    juce::juce_core
-    juce::juce_events
     
     # VST3 SDK
     sdk
     sdk_hosting
     sdk_common
 )
+
+# Link JUCE if available
+if(JUCE_AVAILABLE)
+    target_link_libraries(mixmind_te_adapter PUBLIC
+        juce::juce_audio_basics
+        juce::juce_audio_devices
+        juce::juce_audio_formats
+        juce::juce_audio_processors
+        juce::juce_core
+        juce::juce_events
+    )
+endif()
 
 target_include_directories(mixmind_te_adapter PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

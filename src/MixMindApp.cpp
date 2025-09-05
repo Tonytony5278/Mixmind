@@ -1,5 +1,8 @@
 #include "MixMindApp.h"
 #include "core/async.h"
+#include "licensing/LicenseManager.h"
+#include "analytics/Analytics.h"
+#include "update/AutoUpdater.h"
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>
@@ -37,6 +40,18 @@ MixMindApp::~MixMindApp() {
     if (isRunning()) {
         shutdown().get();
     }
+    
+    // Shutdown production systems
+    try {
+        auto& analytics = analytics::getGlobalAnalytics();
+        analytics.trackAppExit();
+        
+        analytics::shutdownAnalytics();
+        licensing::shutdownLicenseSystem();
+        update::shutdownAutoUpdater();
+    } catch (...) {
+        // Ignore errors during shutdown
+    }
 }
 
 // ========================================================================
@@ -48,6 +63,25 @@ core::AsyncResult<core::VoidResult> MixMindApp::initialize() {
         try {
             if (isRunning()) {
                 return core::VoidResult::failure("Application is already running");
+            }
+            
+            // Initialize production systems
+            licensing::initializeLicenseSystem();
+            analytics::initializeAnalytics();
+            update::initializeAutoUpdater();
+            
+            // Start analytics session
+            auto& analytics = analytics::getGlobalAnalytics();
+            analytics.trackAppStart();
+            
+            // Check license validity
+            auto& licenseManager = licensing::getGlobalLicenseManager();
+            licenseManager.setCurrentVersion(update::AutoUpdater::Version(0, 1, 0));
+            
+            // Check for updates in background
+            auto& updater = update::getGlobalAutoUpdater();
+            updater.setCurrentVersion(update::AutoUpdater::Version(0, 1, 0));
+            updater.enableAutoCheck(true);
             }
             
             emitEvent(AppEvent::Started, "Initializing MixMind application");
@@ -294,6 +328,18 @@ std::shared_ptr<api::RESTServer> MixMindApp::getRESTServer() const {
 
 std::shared_ptr<api::WebSocketServer> MixMindApp::getWebSocketServer() const {
     return wsServer_;
+}
+
+std::shared_ptr<SpeechRecognitionService> MixMindApp::getSpeechRecognitionService() const {
+    return speechService_;
+}
+
+std::shared_ptr<mixmind::ai::ProactiveAIMonitor> MixMindApp::getProactiveMonitor() const {
+    return proactive_monitor_;
+}
+
+std::shared_ptr<AIChatWidget> MixMindApp::getAIChatWidget() const {
+    return ai_chat_widget_;
 }
 
 // ========================================================================
@@ -981,6 +1027,55 @@ core::AsyncResult<core::VoidResult> MixMindApp::initializeOSSServices() {
                 }
             }
             
+            // Initialize Speech Recognition Service
+            speechService_ = std::make_shared<SpeechRecognitionService>();
+            auto speechResult = speechService_->initialize().get();
+            if (speechResult.success) {
+                // Optional: Register with OSS services if needed
+                // ossServices_->registerService("Speech", speechService_);
+            } else {
+                emitEvent(AppEvent::ComponentError, "Speech recognition service initialization failed: " + speechResult.error);
+            }
+            
+            // Initialize Proactive AI Monitor
+            proactive_monitor_ = std::make_shared<mixmind::ai::ProactiveAIMonitor>();
+
+            // Set up suggestion callback to send to AI chat widget
+            auto suggestion_callback = [this](const std::vector<mixmind::ai::ProactiveAIMonitor::ProactiveSuggestion>& suggestions) {
+                if (ai_chat_widget_) {
+                    ai_chat_widget_->updateProactiveSuggestions(suggestions);
+                }
+                
+                std::cout << "🧠 Received " << suggestions.size() << " proactive suggestions" << std::endl;
+                for (const auto& suggestion : suggestions) {
+                    std::cout << "   • " << suggestion.title << std::endl;
+                }
+            };
+
+            // Set up alert callback
+            auto alert_callback = [this](const std::string& alert, mixmind::ai::ProactiveAIMonitor::SuggestionPriority priority) {
+                std::cout << "🚨 AI Alert: " << alert << std::endl;
+                if (ai_chat_widget_) {
+                    ImVec4 alert_color = (priority == mixmind::ai::ProactiveAIMonitor::SuggestionPriority::CRITICAL) ?
+                        ImVec4(1.0f, 0.3f, 0.3f, 1.0f) : ImVec4(1.0f, 0.7f, 0.0f, 1.0f);
+                    ai_chat_widget_->showSuggestion("🚨 " + alert, alert_color);
+                }
+            };
+
+            auto monitorResult = proactive_monitor_->initialize(session_, suggestion_callback, alert_callback).get();
+            if (monitorResult.success) {
+                // Start monitoring automatically
+                proactive_monitor_->startMonitoring();
+                emitEvent(AppEvent::Started, "Proactive AI Monitor started successfully");
+                
+                // Connect to AI chat widget if available
+                if (ai_chat_widget_) {
+                    ai_chat_widget_->setProactiveMonitor(proactive_monitor_);
+                }
+            } else {
+                emitEvent(AppEvent::ComponentError, "Proactive AI Monitor initialization failed: " + monitorResult.error);
+            }
+            
             return core::VoidResult::success();
             
         } catch (const std::exception& e) {
@@ -1009,6 +1104,18 @@ core::AsyncResult<core::VoidResult> MixMindApp::initializeActionAPI() {
             auto result = actionAPI_->initialize().get();
             if (!result.success) {
                 return core::VoidResult::failure("Action API initialization failed: " + result.error);
+            }
+            
+            // Initialize AI Chat Widget after Action API is ready
+            if (actionAPI_) {
+                try {
+                    ai_chat_widget_ = std::make_unique<AIChatWidget>(
+                        std::static_pointer_cast<ai::AIAssistant>(actionAPI_)
+                    );
+                } catch (const std::exception& e) {
+                    // Chat widget failure is not critical, log and continue
+                    emitEvent(AppEvent::ComponentError, "AI Chat Widget initialization failed: " + std::string(e.what()));
+                }
             }
             
             return core::VoidResult::success();

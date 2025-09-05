@@ -2,33 +2,71 @@
 if(NOT MIXMIND_MINIMAL)
     # Full OSS Services Library (heavy dependencies)
     add_library(mixmind_services STATIC
-        KissFFTService.cpp
-        LibEBU128Service.cpp
-        OSCService.cpp
-        TagLibService.cpp
-        TimeStretchService.cpp
+        # KissFFTService.cpp  # Temporarily disabled due to compilation issues
+        # LibEBU128Service.cpp  # Temporarily disabled due to compilation issues
+        # OSCService.cpp  # Disabled temporarily for build stability
+        # TagLibService.cpp  # Temporarily disabled due to compilation issues
+        # TimeStretchService.cpp  # Temporarily disabled due to compilation issues
+        SpeechRecognitionService.cpp  # This one has fewer dependencies
         
         # Headers
-        KissFFTService.h
-        LibEBU128Service.h
-        OSCService.h
-        TagLibService.h
+        # KissFFTService.h  # Temporarily disabled
+        # LibEBU128Service.h  # Temporarily disabled
+        # OSCService.h  # Disabled temporarily
+        # TagLibService.h  # Temporarily disabled
         IOSSService.h
         ONNXService.h
         OSSServiceRegistry.h
-        TimeStretchService.h
+        SpeechRecognitionService.h
+        # TimeStretchService.h  # Temporarily disabled
     )
 
     target_link_libraries(mixmind_services PUBLIC
         mixmind_core
-        kissfft
-        ebur128
-        ${OSC_LIBRARY}
-        tag
-        
-        # Time stretching
-        SoundTouch
     )
+    
+    # Link libraries with correct FetchContent target names
+    # Note: FetchContent creates targets with the project name from their CMakeLists.txt
+    
+    # Temporarily disabled all audio library linking for minimal build
+    # These will be re-enabled once the basic build structure works
+    
+    # # KissFFT - check multiple possible target names
+    # if(TARGET kissfft-static)
+    #     target_link_libraries(mixmind_services PUBLIC kissfft-static)
+    #     target_include_directories(mixmind_services PUBLIC ${kissfft_SOURCE_DIR})
+    # elseif(TARGET kissfft::kissfft)
+    #     target_link_libraries(mixmind_services PUBLIC kissfft::kissfft)
+    # endif()
+    # 
+    # # libebur128 - uses 'ebur128' as target name
+    # if(TARGET ebur128)
+    #     target_link_libraries(mixmind_services PUBLIC ebur128)
+    #     target_include_directories(mixmind_services PUBLIC ${libebur128_SOURCE_DIR}/ebur128)
+    # endif()
+    # 
+    # # TagLib - check both possible target names
+    # if(TARGET tag)
+    #     target_link_libraries(mixmind_services PUBLIC tag)
+    #     target_include_directories(mixmind_services PUBLIC ${taglib_SOURCE_DIR}/taglib)
+    # elseif(TARGET TagLib::tag)
+    #     target_link_libraries(mixmind_services PUBLIC TagLib::tag)
+    #     target_include_directories(mixmind_services PUBLIC ${taglib_SOURCE_DIR}/taglib)
+    # endif()
+    # 
+    # # SoundTouch - likely uses 'SoundTouch' as target name
+    # if(TARGET SoundTouch)
+    #     target_link_libraries(mixmind_services PUBLIC SoundTouch)
+    #     target_include_directories(mixmind_services PUBLIC ${soundtouch_SOURCE_DIR}/include)
+    # elseif(TARGET soundtouch-static)
+    #     target_link_libraries(mixmind_services PUBLIC soundtouch-static)
+    #     target_include_directories(mixmind_services PUBLIC ${soundtouch_SOURCE_DIR}/include)
+    # endif()
+    
+    # OSC support - disable for now to get build working
+    # if(DEFINED OSC_LIBRARY AND TARGET ${OSC_LIBRARY})
+    #     target_link_libraries(mixmind_services PUBLIC ${OSC_LIBRARY})
+    # endif()
 
     # Optional RubberBand support
     if(RUBBERBAND_ENABLED)

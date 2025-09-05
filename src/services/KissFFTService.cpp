@@ -1,4 +1,5 @@
 #include "KissFFTService.h"
+#include "../core/async.h"
 #include <algorithm>
 #include <cmath>
 #include <chrono>
@@ -24,7 +25,7 @@ KissFFTService::~KissFFTService() {
 // ========================================================================
 
 core::AsyncResult<core::VoidResult> KissFFTService::initialize() {
-    return executeAsync<core::VoidResult>([this]() -> core::VoidResult {
+    return core::executeAsyncGlobal<core::Result<void>>([this]() -> core::Result<void> {
         try {
             // Initialize FFT configurations
             auto result = initializeFFTConfig();
@@ -56,13 +57,13 @@ core::AsyncResult<core::VoidResult> KissFFTService::initialize() {
         } catch (const std::exception& e) {
             std::lock_guard<std::mutex> lock(errorMutex_);
             lastError_ = "Initialization failed: " + std::string(e.what());
-            return core::VoidResult::failure(lastError_);
+            return core::core::Result<void>::failure(lastError_);
         }
     });
 }
 
 core::AsyncResult<core::VoidResult> KissFFTService::shutdown() {
-    return executeAsync<core::VoidResult>([this]() -> core::VoidResult {
+    return core::executeAsyncGlobal<core::Result<void>>([this]() -> core::Result<void> {
         try {
             // Stop any active operations
             isAnalyzing_.store(false);
@@ -95,7 +96,7 @@ core::AsyncResult<core::VoidResult> KissFFTService::shutdown() {
         } catch (const std::exception& e) {
             std::lock_guard<std::mutex> lock(errorMutex_);
             lastError_ = "Shutdown failed: " + std::string(e.what());
-            return core::VoidResult::failure(lastError_);
+            return core::core::Result<void>::failure(lastError_);
         }
     });
 }
@@ -181,10 +182,10 @@ std::string KissFFTService::getLastError() const {
 }
 
 core::AsyncResult<core::VoidResult> KissFFTService::runSelfTest() {
-    return executeAsync<core::VoidResult>([this]() -> core::VoidResult {
+    return core::executeAsyncGlobal<core::Result<void>>([this]() -> core::Result<void> {
         try {
             if (!isInitialized()) {
-                return core::VoidResult::failure("Service not initialized");
+                return core::core::Result<void>::failure("Service not initialized");
             }
             
             // Test basic FFT operations
@@ -200,19 +201,19 @@ core::AsyncResult<core::VoidResult> KissFFTService::runSelfTest() {
             // Test forward FFT
             auto forwardResult = forwardFFT(testSignal);
             if (!forwardResult.isSuccess()) {
-                return core::VoidResult::failure("Forward FFT test failed: " + forwardResult.getError());
+                return core::core::Result<void>::failure("Forward FFT test failed: " + forwardResult.getError());
             }
             
             // Test inverse FFT
             auto inverseResult = inverseFFT(forwardResult.getValue());
             if (!inverseResult.isSuccess()) {
-                return core::VoidResult::failure("Inverse FFT test failed: " + inverseResult.getError());
+                return core::core::Result<void>::failure("Inverse FFT test failed: " + inverseResult.getError());
             }
             
             // Test spectrum computation
             auto spectrumResult = computePowerSpectrum(testSignal, static_cast<core::SampleRate>(sampleRate));
             if (!spectrumResult.isSuccess()) {
-                return core::VoidResult::failure("Spectrum computation test failed: " + spectrumResult.getError());
+                return core::core::Result<void>::failure("Spectrum computation test failed: " + spectrumResult.getError());
             }
             
             // Verify spectrum contains expected peak at 440 Hz
@@ -226,13 +227,13 @@ core::AsyncResult<core::VoidResult> KissFFTService::runSelfTest() {
             }
             
             if (!foundPeak) {
-                return core::VoidResult::failure("Expected frequency peak not found in spectrum");
+                return core::core::Result<void>::failure("Expected frequency peak not found in spectrum");
             }
             
             return core::VoidResult::success();
             
         } catch (const std::exception& e) {
-            return core::VoidResult::failure("Self-test failed: " + std::string(e.what()));
+            return core::core::Result<void>::failure("Self-test failed: " + std::string(e.what()));
         }
     });
 }
@@ -254,7 +255,7 @@ void KissFFTService::resetPerformanceMetrics() {
 
 core::VoidResult KissFFTService::setFFTSize(int32_t fftSize) {
     if (!isPowerOfTwo(fftSize) || fftSize < 32 || fftSize > 32768) {
-        return core::VoidResult::failure("FFT size must be a power of 2 between 32 and 32768");
+        return core::core::Result<void>::failure("FFT size must be a power of 2 between 32 and 32768");
     }
     
     std::lock_guard<std::mutex> lock(fftMutex_);
@@ -299,7 +300,7 @@ KissFFTService::WindowType KissFFTService::getWindowType() const {
 
 core::VoidResult KissFFTService::setWindowOverlap(float overlap) {
     if (overlap < 0.0f || overlap >= 1.0f) {
-        return core::VoidResult::failure("Window overlap must be between 0.0 and 0.95");
+        return core::core::Result<void>::failure("Window overlap must be between 0.0 and 0.95");
     }
     
     windowOverlap_ = overlap;
@@ -436,14 +437,14 @@ core::AsyncResult<core::VoidResult> KissFFTService::startRealtimeAnalysis(
     core::SampleRate sampleRate,
     int32_t bufferSize
 ) {
-    return executeAsync<core::VoidResult>([this, sampleRate, bufferSize]() -> core::VoidResult {
+    return core::executeAsyncGlobal<core::Result<void>>([this, sampleRate, bufferSize]() -> core::Result<void> {
         try {
             if (!isInitialized()) {
-                return core::VoidResult::failure("Service not initialized");
+                return core::core::Result<void>::failure("Service not initialized");
             }
             
             if (isRealtimeActive_.load()) {
-                return core::VoidResult::failure("Real-time analysis already active");
+                return core::core::Result<void>::failure("Real-time analysis already active");
             }
             
             // Initialize real-time buffer
@@ -463,13 +464,13 @@ core::AsyncResult<core::VoidResult> KissFFTService::startRealtimeAnalysis(
             return core::VoidResult::success();
             
         } catch (const std::exception& e) {
-            return core::VoidResult::failure("Failed to start real-time analysis: " + std::string(e.what()));
+            return core::core::Result<void>::failure("Failed to start real-time analysis: " + std::string(e.what()));
         }
     });
 }
 
 core::AsyncResult<core::VoidResult> KissFFTService::stopRealtimeAnalysis() {
-    return executeAsync<core::VoidResult>([this]() -> core::VoidResult {
+    return core::executeAsyncGlobal<core::Result<void>>([this]() -> core::Result<void> {
         try {
             isRealtimeActive_.store(false);
             
@@ -482,14 +483,14 @@ core::AsyncResult<core::VoidResult> KissFFTService::stopRealtimeAnalysis() {
             return core::VoidResult::success();
             
         } catch (const std::exception& e) {
-            return core::VoidResult::failure("Failed to stop real-time analysis: " + std::string(e.what()));
+            return core::core::Result<void>::failure("Failed to stop real-time analysis: " + std::string(e.what()));
         }
     });
 }
 
 core::VoidResult KissFFTService::processRealtimeFrame(const float* samples, int32_t sampleCount) {
     if (!isRealtimeActive_.load()) {
-        return core::VoidResult::failure("Real-time analysis not active");
+        return core::core::Result<void>::failure("Real-time analysis not active");
     }
     
     try {
@@ -528,7 +529,7 @@ core::VoidResult KissFFTService::processRealtimeFrame(const float* samples, int3
         return core::VoidResult::success();
         
     } catch (const std::exception& e) {
-        return core::VoidResult::failure("Real-time frame processing failed: " + std::string(e.what()));
+        return core::core::Result<void>::failure("Real-time frame processing failed: " + std::string(e.what()));
     }
 }
 
@@ -738,7 +739,7 @@ core::VoidResult KissFFTService::initializeFFTConfig() {
         // Create forward FFT configuration
         forwardConfig_ = kiss_fft_alloc(fftSize_, 0, nullptr, nullptr);
         if (!forwardConfig_) {
-            return core::VoidResult::failure("Failed to allocate forward FFT configuration");
+            return core::core::Result<void>::failure("Failed to allocate forward FFT configuration");
         }
         
         // Create inverse FFT configuration
@@ -746,13 +747,13 @@ core::VoidResult KissFFTService::initializeFFTConfig() {
         if (!inverseConfig_) {
             kiss_fft_free(forwardConfig_);
             forwardConfig_ = nullptr;
-            return core::VoidResult::failure("Failed to allocate inverse FFT configuration");
+            return core::core::Result<void>::failure("Failed to allocate inverse FFT configuration");
         }
         
         return core::VoidResult::success();
         
     } catch (const std::exception& e) {
-        return core::VoidResult::failure("FFT configuration failed: " + std::string(e.what()));
+        return core::core::Result<void>::failure("FFT configuration failed: " + std::string(e.what()));
     }
 }
 
@@ -863,7 +864,7 @@ core::AsyncResult<core::VoidResult> KissFFTService::analyzeBuffer(
     core::SampleRate sampleRate,
     core::ProgressCallback progress
 ) {
-    return executeAsync<core::VoidResult>([this, &buffer, sampleRate, progress]() -> core::VoidResult {
+    return core::executeAsyncGlobal<core::Result<void>>([this, &buffer, sampleRate, progress]() -> core::Result<void> {
         try {
             isAnalyzing_.store(true);
             shouldCancel_.store(false);
@@ -875,7 +876,7 @@ core::AsyncResult<core::VoidResult> KissFFTService::analyzeBuffer(
             for (int32_t channel = 0; channel < numChannels; ++channel) {
                 if (shouldCancel_.load()) {
                     isAnalyzing_.store(false);
-                    return core::VoidResult::failure("Analysis cancelled");
+                    return core::Result<void>::failure("Analysis cancelled");
                 }
                 
                 // Extract channel data
@@ -888,7 +889,7 @@ core::AsyncResult<core::VoidResult> KissFFTService::analyzeBuffer(
                 auto spectrumResult = computePowerSpectrum(channelData, sampleRate);
                 if (!spectrumResult.isSuccess()) {
                     isAnalyzing_.store(false);
-                    return core::VoidResult::failure("Spectrum analysis failed: " + spectrumResult.getError());
+                    return core::core::Result<void>::failure("Spectrum analysis failed: " + spectrumResult.getError());
                 }
                 
                 // Extract spectral features
@@ -917,7 +918,7 @@ core::AsyncResult<core::VoidResult> KissFFTService::analyzeBuffer(
             
         } catch (const std::exception& e) {
             isAnalyzing_.store(false);
-            return core::VoidResult::failure("Buffer analysis failed: " + std::string(e.what()));
+            return core::core::Result<void>::failure("Buffer analysis failed: " + std::string(e.what()));
         }
     });
 }
