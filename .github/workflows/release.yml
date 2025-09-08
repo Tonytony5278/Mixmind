@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Create GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: MixMind AI ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
@@ -107,7 +107,7 @@ jobs:
           Get-ChildItem *.exe | Rename-Item -NewName { "MixMind-Setup-$env:GITHUB_REF_NAME.exe" }
 
       - name: Upload Windows Installer
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: build/MixMind-Setup-${{ github.ref_name }}.exe
 
@@ -194,7 +194,7 @@ jobs:
       #     # codesign and xcrun notarytool steps would go here
 
       - name: Upload macOS DMG
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: build/MixMind-${{ github.ref_name }}.dmg
 
@@ -307,13 +307,13 @@ jobs:
 
       - name: Upload Linux AppImage
         if: matrix.format == 'AppImage'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: MixMind-${{ github.ref_name }}.AppImage
 
       - name: Upload Linux tar.gz
         if: matrix.format == 'tar.gz'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: build/MixMind-${{ github.ref_name }}.tar.gz
 
